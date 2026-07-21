@@ -35,10 +35,16 @@ Copy `.env.example` to `.env` when local overrides are needed. The default Compo
 docker compose up --build
 ```
 
-For local Bedrock access, authenticate with the AWS CLI and select the optional read-only profile override. Do not place AWS access keys in Compose, source files, or `.env.example`.
+For local Bedrock access, authenticate with the AWS CLI and select the optional read-only profile override. The API-only Compose service can also receive `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and an optional `AWS_SESSION_TOKEN` from an ignored local `.env`; it never forwards them to the frontend and they must never be committed, placed in `.env.example`, or included in an export.
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.aws-profile.example.yml up --build
+```
+
+After changing local AWS credentials in `.env`, recreate the API service so it receives the updated values:
+
+```bash
+docker compose up -d --force-recreate api
 ```
 
 Create a shareable source archive only with the safe packaging script. It excludes local `.env`, dependencies, build output, uploads, virtual environments, caches, and generated artifacts.

@@ -33,6 +33,12 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE:-knowledge-platform-web}
       AWS_REGION: ${AWS_REGION:-}
       AWS_PROFILE: ${AWS_PROFILE:-}
+      # Development-only credential passthrough for the Bedrock client. Values
+      # remain in the ignored local .env and are intentionally not exposed to
+      # the browser service or committed configuration.
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
       BEDROCK_EMBEDDING_MODEL_ID: ${BEDROCK_EMBEDDING_MODEL_ID:-}
       BEDROCK_EMBEDDING_PROVIDER: ${BEDROCK_EMBEDDING_PROVIDER:-auto}
       BEDROCK_EMBEDDING_DIMENSIONS: ${BEDROCK_EMBEDDING_DIMENSIONS:-}

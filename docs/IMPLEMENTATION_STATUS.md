@@ -43,8 +43,15 @@ There are 11 planned phases in total: Phase 0 through Phase 10.
 
 | Priority | Scope | Status | Evidence required before closing the slice |
 |---|---|---|---|
-| 0 | Ignore local env files, remove Compose credential forwarding, scan in CI, document CLI-profile/EC2-role chain | Complete for approved slice | No shared/exported archive was present to remediate; the new tested package script excludes `.env`, dependency/build/upload/cache/virtual-environment/generated paths. The expanded path-only scanner passes locally and is in CI. Local branch renamed to `main`. |
+| 0 | Ignore local env files, isolate local API credentials, scan in CI, document CLI-profile/EC2-role chain | Complete for approved slice | No shared/exported archive was present to remediate; the new tested package script excludes `.env`, dependency/build/upload/cache/virtual-environment/generated paths. The expanded path-only scanner passes locally and is in CI. Local credentials are forwarded only to the API container, never to the web container, and local branch is `main`. |
 | 1 | Technology serialization, draft/applied search state, eligibility floor, deterministic explanations | Complete for approved slice | One `SEARCH_RESULT_THRESHOLD` controls eligibility and no-answer. Semantic explanations require >=0.60, summary context is global-ranked, and all requested API/UI regressions pass. |
+
+### Local Bedrock search verification — 2026-07-21
+
+- **Observed failure:** browser `POST /api/v1/search` returned HTTP 503 while PostgreSQL and the API health endpoint remained healthy. The UI correctly showed its retryable error state.
+- **Root cause:** the base API Compose service had Bedrock enabled but did not receive the operator's ignored local AWS credentials, so Boto3 could not create a usable Bedrock request.
+- **Correction:** Compose now forwards `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optional `AWS_SESSION_TOKEN` to the API service only. `.env` remains ignored, excluded from packages, and unavailable to the web service.
+- **Live validation:** after `docker compose up -d --force-recreate api`, a login as the fictional development employee followed by `POST /api/v1/search` for `Terraform` returned `200`, five verified results, `no_answer=false`, and `semantic_search=available`. Automated adapter/UI tests still avoid live AWS calls by design; this manual smoke test covers the local credential wiring.
 
 ## Phase 0 acceptance criteria
 
