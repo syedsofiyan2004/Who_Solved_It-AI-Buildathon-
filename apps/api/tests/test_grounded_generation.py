@@ -12,7 +12,7 @@ from app.services.grounded_generation import (
 
 
 SETTINGS_VALUES = {
-    "DATABASE_URL": "postgresql+psycopg://app_user:local_password@postgres:5432/knowledge_platform",
+    "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
     "JWT_SECRET": "replace-with-a-long-random-secret-before-starting-the-api",
     "AWS_REGION": "us-east-1",
     "BEDROCK_EMBEDDING_MODEL_ID": "amazon.titan-embed-text-v2:0",

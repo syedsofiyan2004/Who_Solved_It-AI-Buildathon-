@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Phase 9 - Interactive UI: In progress.** Phases 0 through 8 are complete. Phase 9 now exposes grounded summaries/citations in search, recent verified records on the dashboard, and authorized solution reading. Authoring, reviewer, and profile workflow interactions remain to be completed before this phase can be marked complete.
+**Phase 9 - Interactive UI: In progress.** Phases 0 through 8 are complete. Phase 9 now exposes grounded summaries/citations in search, recent verified records on the dashboard, and authorized solution reading. The approved Priority 0 security cleanup and Priority 1 search-correctness remediation are in progress. Authoring, reviewer, and profile workflow interactions remain outside this approved remediation slice and must be completed before this phase can be marked complete.
 
 There are 11 planned phases in total: Phase 0 through Phase 10.
 
@@ -13,7 +13,7 @@ There are 11 planned phases in total: Phase 0 through Phase 10.
 | Area | Status | Tests | UI states | Documentation | Blocker |
 |---|---|---:|---:|---:|---|
 | Phase 0 requirements/design lock | Complete | Documentation validation only | Specified | Yes | No |
-| Phase 1 project foundation | Complete pending review | Passing | Foundation shell only | Yes | Git repository metadata/remote remains unresolved |
+| Phase 1 project foundation | Complete | Passing | Foundation shell only | Yes | No |
 | Phase 2 authentication | Complete pending review | Passing | Login, validation, protected-route and sign-out states | Yes | Long-term SSO/password policy remains a pre-real-user decision |
 | Phase 3 knowledge repository | Complete pending review | Passing | API lifecycle and safe attachment states | Yes | Attachment scanner and retention policy required before real employee use |
 | Phase 4 UI foundation | Complete | Passing | Responsive shell, command, loading/empty/error/denied foundations | Yes | Brand identity and final visual-reference approval remain open |
@@ -28,7 +28,7 @@ There are 11 planned phases in total: Phase 0 through Phase 10.
 
 | Item | Classification | Effect and current treatment |
 |---|---|---|
-| Git repository metadata, GitHub remote and CI ownership | Required before CI use and collaboration workflow | `.github/workflows/ci.yml` exists, but `git status` still returns `fatal: not a git repository (or any of the parent directories): .git`. Repository repair/init requires explicit approval. |
+| GitHub remote and CI ownership | Required before hosted CI use and collaboration workflow | The local repository was initialized with an initial commit. No remote was requested or configured; `.github/workflows/ci.yml` will run after the user adds a remote and enables Actions. |
 | Product/brand name and primary accent colour | Required before real employee use | Generic working name and semantic colour tokens remain in use; no brand styling selected. |
 | AWS account, approved Region, Bedrock embedding/generation model IDs, IAM policy | Required before AWS deployment | Development uses configured Amazon Titan Text Embeddings V2 embeddings and the selected available Claude 3 Haiku generation model in the configured Region. Both adapters completed real fictional-data calls. Production model-cost approval and least-privilege IAM review remain required before deployment. |
 | 10-20 fictional employee records and 30-50 solutions | Satisfied for development | `scripts/seed_dev.py` idempotently inserts 24 fictional `example.test` employees, 12 technologies, and 36 fictional challenge/solution records (30 verified, 3 submitted, 3 draft). No real employee data is used. |
@@ -38,6 +38,13 @@ There are 11 planned phases in total: Phase 0 through Phase 10.
 | SMTP/contact delivery mechanism | Required before real employee use | MVP uses a protected contact detail/action; no email sending integration is planned. |
 | TLS certificate and inbound security-group policy | Required before AWS deployment | Deployment remains Phase 10 work. |
 | Attachment malware scanner and retention period | Required before real employee use | Phase 3 stores uploads outside the public path with `pending_scan` status and denies download until an approved scanner integration marks them available. |
+
+## Phase 9 remediation status
+
+| Priority | Scope | Status | Evidence required before closing the slice |
+|---|---|---|---|
+| 0 | Ignore local env files, remove Compose credential forwarding, scan in CI, document CLI-profile/EC2-role chain | Complete for approved slice | No shared/exported archive was present to remediate; the new tested package script excludes `.env`, dependency/build/upload/cache/virtual-environment/generated paths. The expanded path-only scanner passes locally and is in CI. Local branch renamed to `main`. |
+| 1 | Technology serialization, draft/applied search state, eligibility floor, deterministic explanations | Complete for approved slice | One `SEARCH_RESULT_THRESHOLD` controls eligibility and no-answer. Semantic explanations require >=0.60, summary context is global-ranked, and all requested API/UI regressions pass. |
 
 ## Phase 0 acceptance criteria
 
@@ -302,3 +309,9 @@ Phase 7 index experimentation ran `docker compose exec -T api alembic upgrade he
 The first Phase 8 settings regression inherited the newly configured local generation values, so its expected missing-configuration validation did not fail. The failing layer was test isolation. The smallest correction explicitly supplied blank Region/model values in that negative test; focused adapter, repository, and settings tests then passed.
 
 Phase 9 browser inspection showed `/search` rendering the older `WorkflowPage` placeholder even though the mounted `App.tsx` correctly routes that path to `SearchPage`. The failing layer was the Windows-mounted Vite transformed-module cache, not routing or search data. The smallest correction was `docker compose restart web`; the current source then typechecked successfully. Refresh the browser after the restart to receive the current module.
+
+During Phase 9 Priority 0 validation, the first liveness request ran immediately after `docker compose ... up -d api` recreated the container and returned `ConnectionRefusedError`. The failing layer was normal API startup timing while Alembic and Uvicorn initialized, not credential configuration or application code. Container status and logs showed successful startup; the configured health check then reported healthy and the repeated liveness request returned `200`. No code correction was required.
+
+Phase 9 Priority 1 live UI verification still rendered technology tags as `{ K u b e r n e t e s }` after the frontend cache was removed. The live PostgreSQL layer returned an untyped `array_agg` value as `list ['{', 'K', 'u', ..., '}']`; the failing layer was backend aggregate serialization, not the browser. `_technology_names` now recognizes and recursively normalizes that driver-specific literal shape, with regression coverage. After restarting the API, an authenticated fictional-data search returned only `"Kubernetes"`; the browser must perform a fresh search to replace its cached pre-fix response.
+
+During the final Priority 0-1 validation, one combined Docker command exceeded the 124-second command-observation limit and Docker Desktop briefly lost its Linux engine pipe. The failing layer was local Docker execution, not the application. The corrective action was to split validation into isolated commands after Docker Desktop recovered. API lint/tests, frontend typecheck/tests/build, clean migration downgrade/upgrade, two idempotent seed runs, packaging, and secret scanning then completed successfully. A first global-grounding regression fixture also used a non-persisted solution UUID and correctly failed its foreign-key check; the test now creates the fixture solution through the repository API before exercising the route.

@@ -5,7 +5,7 @@ from app.core.config import Settings
 
 
 BASE_VALUES = {
-    "DATABASE_URL": "postgresql+psycopg://app_user:local_password@postgres:5432/knowledge_platform",
+    "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
     "JWT_SECRET": "replace-with-a-long-random-secret-before-starting-the-api",
 }
 
@@ -54,3 +54,9 @@ def test_embeddings_enabled_requires_its_own_model_configuration():
 def test_production_rejects_placeholder_jwt_secret():
     with pytest.raises(ValidationError):
         Settings(**BASE_VALUES, APP_ENV="production", RAG_ENABLED=False)
+
+
+def test_one_search_threshold_is_configured_for_eligibility_and_no_answer():
+    settings = Settings(**BASE_VALUES, SEARCH_RESULT_THRESHOLD=0.52)
+
+    assert settings.search_result_threshold == 0.52

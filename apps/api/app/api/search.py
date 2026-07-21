@@ -34,12 +34,12 @@ def search_solutions(
 ):
     search_rate_limiter.check(f"search:{current_user.id}", limit=settings.rate_limit_search_per_minute)
     try:
-        results, total, latency_ms, confidence, no_answer = execute_hybrid_search(
+        results, total, latency_ms, confidence, no_answer, ranked_solution_ids = execute_hybrid_search(
             db,
             user=current_user,
             payload=payload,
             adapter=BedrockEmbeddingAdapter(settings),
-            threshold=settings.search_similarity_threshold or 0.35,
+            threshold=settings.search_result_threshold,
         )
     except EmbeddingContentRejected as exc:
         raise HTTPException(status_code=422, detail={"code": "unsafe_search_content", "message": str(exc)}) from exc
@@ -55,7 +55,7 @@ def search_solutions(
         try:
             sources = build_grounding_sources(
                 db,
-                solution_ids=[item.solution_id for item in results[: settings.rag_max_context_solutions]],
+                solution_ids=ranked_solution_ids[: settings.rag_max_context_solutions],
             )
             answer = BedrockGroundedGenerationAdapter(settings).generate(query=payload.query, sources=sources)
             summary = answer.summary or None

@@ -57,4 +57,24 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /Container startup failure/ }));
     expect(screen.getByRole("dialog", { name: "Preview solution" })).toBeInTheDocument();
   });
+
+  it("keeps a typed draft separate from the applied search query", async () => {
+    const user = userEvent.setup();
+    renderApp("/search");
+    await user.type(screen.getByLabelText("Work email"), "employee@example.test");
+    await user.type(screen.getByLabelText("Password"), "correct-password");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    const input = await screen.findByPlaceholderText("Paste an error message or describe the roadblock");
+    await user.type(input, "Terraform");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Terraform");
+
+    await user.clear(input);
+    await user.type(input, "Docker");
+    expect(screen.getByTestId("applied-search-query")).toHaveTextContent("Terraform");
+
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Docker");
+  });
 });

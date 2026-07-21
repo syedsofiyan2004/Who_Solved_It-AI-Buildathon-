@@ -13,7 +13,7 @@ from app.services.embeddings import BedrockEmbeddingAdapter, EmbeddingContentRej
 
 
 BASE_VALUES = {
-    "DATABASE_URL": "postgresql+psycopg://app_user:local_password@postgres:5432/knowledge_platform",
+    "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
     "JWT_SECRET": "replace-with-a-long-random-secret-before-starting-the-api",
     "BEDROCK_EMBEDDINGS_ENABLED": True,
     "AWS_REGION": "us-east-1",

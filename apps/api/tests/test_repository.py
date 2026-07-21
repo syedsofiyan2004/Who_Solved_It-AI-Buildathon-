@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import uuid4
 from pathlib import Path
 from types import SimpleNamespace
@@ -22,7 +23,10 @@ from app.models.repository import (
     Team,
     Technology,
     VerificationReview,
+    ContentStatus,
+    VisibilityLevel,
 )
+from app.schemas.repository import SearchResult
 from app.services.grounded_generation import GroundedAnswer
 
 
@@ -216,7 +220,11 @@ def test_hybrid_search_exact_match_filters_authorization_and_logs(repository_fix
     assert payload["data"]["service_status"]["semantic_search"] == "available"
     assert payload["data"]["summary"] is None
     assert payload["data"]["results"][0]["challenge_id"] == challenge_id
-    assert payload["data"]["results"][0]["match_reasons"] == ["Exact error match"]
+    assert payload["data"]["results"][0]["match_reasons"][:2] == [
+        "Exact error message contains the query",
+        "Query terms match the documented issue",
+    ]
+    assert len(payload["data"]["results"][0]["match_reasons"]) <= 3
     assert payload["data"]["results"][0]["solver"]["display_name"] == "Author"
 
     summary_requested = client.post("/api/v1/search", headers=outsider_headers, json={"query": "Container startup deployment", "filters": {"verified_only": True}, "page": 1, "page_size": 10, "sort": "relevance", "include_summary": True})
@@ -240,3 +248,43 @@ def test_hybrid_search_exact_match_filters_authorization_and_logs(repository_fix
     assert denied.json()["data"]["no_answer"] is True
     assert denied.json()["data"]["service_status"]["grounded_summary"] == "not_run_no_answer"
     assert _FakeGroundedGenerationAdapter.calls == 0
+
+
+def test_grounded_summary_uses_global_ranked_sources_not_only_current_page(repository_fixture, monkeypatch):
+    client = TestClient(create_app())
+    headers = _headers(client, repository_fixture["users"]["outsider"].email)
+    author_headers = _headers(client, repository_fixture["users"]["author"].email)
+    created = client.post("/api/v1/challenges", headers=author_headers, json=_draft_payload(repository_fixture))
+    assert created.status_code == 201
+    page_challenge_id = created.json()["data"]["id"]
+    page_solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == page_challenge_id).scalar()
+    globally_ranked_ids = [uuid4(), uuid4(), uuid4(), uuid4()]
+    page_result = SearchResult(
+        challenge_id=page_challenge_id, solution_id=page_solution_id, title="Visible page-two result",
+        problem_excerpt="Problem", root_cause_excerpt="Cause", resolution_steps=["Resolve"],
+        exact_error_message=None, status=ContentStatus.VERIFIED, visibility=VisibilityLevel.COMPANY,
+        solved_at=None, updated_at=datetime.now(UTC),
+        technologies=["Docker"], solver={"user_id": repository_fixture["users"]["author"].id, "display_name": "Author", "job_title": "Engineer"},
+        match_reasons=["Query terms match the documented issue"], score=0.9,
+    )
+    captured: dict[str, list] = {}
+
+    def capture_sources(db, *, solution_ids):
+        captured["solution_ids"] = solution_ids
+        return [SimpleNamespace(solution_id=solution_ids[0])]
+
+    monkeypatch.setattr("app.api.search.BedrockEmbeddingAdapter", _FakeEmbeddingAdapter)
+    monkeypatch.setattr(
+        "app.api.search.execute_hybrid_search",
+        lambda *args, **kwargs: ([page_result], 4, 1, 0.9, False, globally_ranked_ids),
+    )
+    monkeypatch.setattr("app.api.search.build_grounding_sources", capture_sources)
+    monkeypatch.setattr("app.api.search.BedrockGroundedGenerationAdapter", _FakeGroundedGenerationAdapter)
+
+    searched = client.post(
+        "/api/v1/search", headers=headers,
+        json={"query": "Docker package import", "filters": {"verified_only": True}, "page": 2, "page_size": 1, "sort": "relevance", "include_summary": True},
+    )
+
+    assert searched.status_code == 200
+    assert captured["solution_ids"] == globally_ranked_ids[:3]

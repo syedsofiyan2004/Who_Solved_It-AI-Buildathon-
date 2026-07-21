@@ -45,3 +45,11 @@ Evaluation row schema: `query`, `expected_solution_id`, `expected_solver_id`, `e
 ## 5. Test execution policy
 
 Exact commands are introduced with Phase 1 tooling and recorded in `IMPLEMENTATION_STATUS.md`. Every bug follows the error protocol in `SECURITY.md`; a regression test accompanies a code fix when feasible. Failing tests block phase completion and cannot be worked around by changing the architecture or skipping the feature.
+
+## 6. Phase 9 Priority 0-1 regression additions
+
+- Repository secret scanner: fail only with affected paths when an AKIA/ASIA key, private key, GitHub token, non-placeholder AWS/token/API-key/JWT-secret assignment, or password-bearing database URL occurs outside ignored local `.env`; exercise it from the repository root and in CI. Package-export tests verify that local env, dependencies, builds, uploads, virtual environments, caches, and generated artifacts are absent.
+- Configuration: reject an eligibility floor below the no-answer threshold and report missing Bedrock configuration by variable name only.
+- Search serialization: assert PostgreSQL aggregate strings and native arrays both become complete `list[str]` technology values.
+- Search ranking: assert one/multiple technology serialization, ineligible-result exclusion, accurate totals, pagination after filtering, deduplication, one-threshold no-answer behavior, and stable explanations; integration coverage confirms summary context uses the global ranked source cap.
+- Search UI: assert complete technology chips, URL-refresh restoration, browser back/forward restoration, immediate loading, no-answer, error/retry, and draft-versus-applied-query behavior.

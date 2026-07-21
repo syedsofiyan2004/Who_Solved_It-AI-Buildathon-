@@ -37,12 +37,7 @@ class Settings(BaseSettings):
     rag_max_context_solutions: int = Field(default=3, ge=1, le=5, alias="RAG_MAX_CONTEXT_SOLUTIONS")
 
     search_result_limit: int = Field(default=10, ge=1, le=20, alias="SEARCH_RESULT_LIMIT")
-    search_similarity_threshold: float | None = Field(
-        default=0.35,
-        ge=0,
-        le=1,
-        alias="SEARCH_SIMILARITY_THRESHOLD",
-    )
+    search_result_threshold: float = Field(default=0.45, ge=0, le=1, alias="SEARCH_RESULT_THRESHOLD")
     rag_enabled: bool = Field(default=False, alias="RAG_ENABLED")
 
     upload_provider: str = Field(default="local", alias="UPLOAD_PROVIDER")
@@ -72,13 +67,6 @@ class Settings(BaseSettings):
     def parse_csv(cls, value):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
-        return value
-
-    @field_validator("search_similarity_threshold", mode="before")
-    @classmethod
-    def parse_optional_float(cls, value):
-        if value == "":
-            return None
         return value
 
     @model_validator(mode="after")
@@ -114,7 +102,6 @@ class Settings(BaseSettings):
                 raise ValueError(f"BEDROCK_EMBEDDINGS_ENABLED requires: {', '.join(missing)}.")
         if self.bedrock_embedding_provider not in {"auto", "amazon_titan", "cohere"}:
             raise ValueError("BEDROCK_EMBEDDING_PROVIDER must be auto, amazon_titan, or cohere.")
-
         return self
 
     @property

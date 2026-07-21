@@ -2,7 +2,7 @@
 
 ## Audit scope and constraints
 
-The remediation brief, approved design/architecture documents, existing source, migrations, seed data, and tests were reviewed. The 36-page [Internal Technical Knowledge Platform.pdf](D:\Expert Discovery Platform\docs\Internal%20Technical%20Knowledge%20Platform.pdf) is the master plan and was re-read in full on 2026-07-21. `docs/decisions/` has no approved ADR files. The repository has no usable Git metadata, so tracked-file history cannot be verified locally.
+The remediation brief, approved design/architecture documents, existing source, migrations, seed data, and tests were reviewed. The 36-page [Internal Technical Knowledge Platform.pdf](D:\Expert Discovery Platform\docs\Internal%20Technical%20Knowledge%20Platform.pdf) is the master plan and was re-read in full on 2026-07-21. `docs/decisions/` has no approved ADR files. The local repository was initialized on 2026-07-21; no investigation of pre-initialization history was requested.
 
 ## Confirmed defects
 
@@ -34,7 +34,11 @@ Employee-profile API/UI, structured authorized solver/contact serialization, aut
 
 Phase 9 remains **In progress** until every remediation requirement is implemented or explicitly blocked with user approval. Phase 10 deployment work is excluded.
 
+## Priority 0-1 completion record
+
+Priority 0 and Priority 1 are complete for the approved correction scope. The safe package export has no `.env` or generated/local directories; the scanner reports paths only and covers the required key/token/URL forms; `main` is the local branch. Retrieval now uses one threshold, semantic-context wording has a 0.60 minimum, and grounding selects globally ranked authorized eligible records rather than only the visible page. Phase 9 remains in progress because Priority 2 and later work is excluded by approval.
+
 ## Blockers requiring user action
 
-- The AWS account owner must deactivate/rotate any AWS credentials that may previously have appeared in an archive or local `.env`; this cannot be safely performed from this workspace.
-- Git history is unavailable locally, so prior tracking of any credential exposure cannot be verified. Supply repository history if an audit of prior commits is required.
+- **Resolved - credential rotation:** the user confirmed on 2026-07-21 that the previously exposed AWS credentials were rotated/deactivated. This is retained as an audit record only; no credential values are recorded here.
+- **Resolved - history review not requested:** the repository begins with the approved local initialization, and the user explicitly declined a pre-initialization history investigation.

@@ -4,7 +4,7 @@ Internal MVP for recording solved technical problems, discovering verified prior
 
 ## Phase status
 
-Phase 0 is approved. Phase 1 adds the runnable local foundation only: web, API, PostgreSQL with pgvector, migrations, health checks, seed skeleton, and CI. Product features begin in later phases. Read `docs/IMPLEMENTATION_STATUS.md` before beginning work.
+Phases 0-8 are implemented. Phase 9 remediation is in progress; Phase 10 deployment work has not started. Read `docs/IMPLEMENTATION_STATUS.md` before beginning work.
 
 ## Locked architecture
 
@@ -33,6 +33,18 @@ Copy `.env.example` to `.env` when local overrides are needed. The default Compo
 
 ```bash
 docker compose up --build
+```
+
+For local Bedrock access, authenticate with the AWS CLI and select the optional read-only profile override. Do not place AWS access keys in Compose, source files, or `.env.example`.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.aws-profile.example.yml up --build
+```
+
+Create a shareable source archive only with the safe packaging script. It excludes local `.env`, dependencies, build output, uploads, virtual environments, caches, and generated artifacts.
+
+```bash
+python apps/api/scripts/package_source.py --output artifacts/knowledge-platform-source.zip
 ```
 
 Then check:

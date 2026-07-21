@@ -1,0 +1,8 @@
+services:
+  api:
+    # Local development only. This mounts the operator's standard AWS CLI profile
+    # directory read-only; no key is copied into this repository or base Compose file.
+    environment:
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+    volumes:
+      - ${USERPROFILE}/.aws:/root/.aws:ro

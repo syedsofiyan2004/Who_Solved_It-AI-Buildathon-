@@ -4,6 +4,15 @@ All notable project changes are documented here. The format is intentionally lig
 
 ## [Unreleased]
 
+### Changed - Phase 9 remediation in progress
+
+- Began the approved Priority 0 security cleanup and Priority 1 search-correctness remediation only; Phase 10 and the remaining Phase 9 workflows were not started.
+- Removed AWS static credential forwarding from the base Compose configuration, added a path-only repository secret scanner in CI, and documented local AWS CLI-profile versus EC2-instance-role authentication.
+- Normalized PostgreSQL technology aggregates to complete string arrays, introduced a per-result retrieval eligibility floor, and made search explanations signal-derived and capped at three.
+- Clarified the search interface's applied query and rendered the returned explanations rather than a generic match label.
+- Corrected the remaining psycopg untyped-array shape, which can arrive as a list of individual PostgreSQL literal characters, so live result tags render as complete technology names.
+- Completed the approved Priority 0-1 correction slice: safe source packaging, expanded path-only secret detection and tests, `main` branch alignment, one retrieval/no-answer threshold, minimum semantic-reason confidence, globally ranked grounding context, and expanded backend/frontend regressions.
+
 ### Added - Phase 8 grounded RAG answers
 
 - Strict Bedrock grounded-generation adapter with a JSON-only prompt, permitted technical context reconstruction, source UUID citation validation, secret/contact output checks, and no synthetic fallback.

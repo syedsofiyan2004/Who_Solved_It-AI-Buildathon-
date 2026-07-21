@@ -17,7 +17,7 @@ Codes: 400 malformed request, 401 unauthenticated, 403 unauthorized, 404 authori
 - `User`: `id,email,role,is_active,profile` (profile includes approved display name/title/team/department/contact fields only when viewer is allowed).
 - `ChallengeSummary`: `id,title,symptoms_excerpt,exact_error_excerpt,technologies,status,visibility,verified,solved_at,owner`.
 - `ChallengeDetail`: summary plus problem description, environment, solution, contributors, reviews allowed to viewer, attachments permitted to viewer, feedback aggregate.
-- `SearchResult`: `solution_id,challenge,score,match_reasons,verified,solver,allowed_contact,citation`; generated text is separate.
+- `SearchResult`: `solution_id,challenge,score,match_reasons,verified,solver,allowed_contact,citation`; `technologies` is always an array of complete strings and `match_reasons` contains at most three deterministic signal explanations. Generated text is separate.
 
 ## 3. Endpoint catalogue
 
@@ -67,6 +67,8 @@ Attachment upload accepts only configured MIME types, a maximum configured size,
 `POST /search` returns `{data:{query_id,results,summary,summary_citations,summary_error,confidence,no_answer,service_status},meta:{page,page_size,total,has_next}}`. In Phase 8, `include_summary=true` embeds the authenticated query, merges already-authorized pgvector/FTS/exact-error candidates, and—only when the confidence gate passes—sends the first three permitted technical records to Bedrock. `summary_citations` is an allow-listed array of immutable solution UUIDs; solver fields remain PostgreSQL serialization and no contact field is returned.
 
 An embedding dependency failure returns `503 semantic_search_unavailable`; unsafe query content returns `422 unsafe_search_content`. A generation dependency or output-validation failure returns the source results with `summary:null`, empty citations, a safe `summary_error`, and `service_status.grounded_summary` of `unavailable` or `invalid_response`. No-answer results return `grounded_summary:not_run_no_answer` and do not invoke generation.
+
+Candidates below the single `SEARCH_RESULT_THRESHOLD` are removed before `meta.total`, pagination, search logging, and grounding context. When none remain, the response is `no_answer=true`. Grounding always uses the highest-ranked authorized eligible results globally, capped by `RAG_MAX_CONTEXT_SOLUTIONS`, rather than the current page only. `technologies` is always a JSON array of complete strings rather than a PostgreSQL array literal. `match_reasons` contains no more than three deterministic signal explanations.
 
 ## 5. Authorization behaviour
 

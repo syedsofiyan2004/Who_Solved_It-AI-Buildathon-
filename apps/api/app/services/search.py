@@ -1,8 +1,7 @@
+from datetime import UTC, datetime
 import csv
 from time import perf_counter
 from uuid import UUID
-
-from datetime import UTC, datetime
 
 from sqlalchemy import and_, bindparam, func, literal, or_, select
 from sqlalchemy.orm import Session
@@ -24,6 +23,9 @@ from app.services.embeddings import BedrockEmbeddingAdapter
 from app.services.repository import can_view_challenge
 
 
+SEMANTIC_MATCH_REASON_MINIMUM = 0.60
+
+
 def _technology_names(value: object) -> list[str]:
     """Normalize psycopg array results without leaking PostgreSQL literals to the API."""
     if value is None:
@@ -34,8 +36,53 @@ def _technology_names(value: object) -> list[str]:
             text = text[1:-1]
         return [item.strip() for item in next(csv.reader([text]), []) if item.strip()]
     if isinstance(value, (list, tuple)):
-        return [str(item) for item in value if str(item).strip()]
+        items = [str(item) for item in value if str(item).strip()]
+        # psycopg can return an untyped array aggregate as the individual
+        # characters of its PostgreSQL literal, for example ['{', 'OIDC', '}']
+        # or ['{', 'O', 'I', 'D', 'C', '}']. Normalize that shape recursively.
+        if len(items) >= 2 and items[0] == "{" and items[-1] == "}":
+            return _technology_names("".join(items))
+        return items
     return [str(value)]
+
+
+def _match_reasons(*, semantic: float, has_keyword: bool, exact: bool, technology_filter: bool) -> list[str]:
+    """Return stable, user-facing explanations for the retrieval signals used."""
+    reasons: list[str] = []
+    if exact:
+        reasons.append("Exact error message contains the query")
+    if has_keyword:
+        reasons.append("Query terms match the documented issue")
+    if technology_filter:
+        reasons.append("Matches the selected technology")
+    if semantic >= SEMANTIC_MATCH_REASON_MINIMUM:
+        reasons.append("Similar technical context")
+    return reasons[:3]
+
+
+def _finalize_ranked_results(
+    results: list[SearchResult], *, newest: bool, threshold: float
+) -> list[SearchResult]:
+    """Deduplicate, apply the one result/no-answer threshold, and sort stably."""
+    deduplicated: dict[UUID, SearchResult] = {}
+    for result in results:
+        existing = deduplicated.get(result.solution_id)
+        if existing is None or result.score > existing.score:
+            deduplicated[result.solution_id] = result
+    eligible = [result for result in deduplicated.values() if result.score >= threshold]
+    if newest:
+        eligible.sort(key=lambda item: (item.updated_at, str(item.solution_id)), reverse=True)
+    else:
+        eligible.sort(
+            key=lambda item: (item.score, item.solved_at or item.updated_at.date(), str(item.solution_id)),
+            reverse=True,
+        )
+    return eligible
+
+
+def _search_outcome(results: list[SearchResult]) -> tuple[float | None, bool]:
+    """The single threshold has already filtered results, so no result is no-answer."""
+    return (results[0].score, False) if results else (None, True)
 
 
 def _excerpt(value: str, limit: int = 280) -> str:
@@ -160,7 +207,7 @@ def execute_hybrid_search(
     payload: SearchRequest,
     adapter: BedrockEmbeddingAdapter,
     threshold: float,
-) -> tuple[list[SearchResult], int, int, float | None, bool]:
+) -> tuple[list[SearchResult], int, int, float | None, bool, list[UUID]]:
     """Merge authorized Bedrock vector, FTS, and exact-error candidates.
 
     A keyword candidate remains eligible when a verified record is awaiting its
@@ -278,8 +325,11 @@ def execute_hybrid_search(
         ]
         active_weight = sum(weight for _, weight, available in channels if available)
         score = sum(value * weight for value, weight, available in channels if available) / active_weight
-        reasons = (["Semantic match"] if raw_semantic is not None else []) + (
-            keyword.match_reasons if keyword else []
+        reasons = _match_reasons(
+            semantic=semantic,
+            has_keyword=keyword is not None,
+            exact=bool(keyword and "Exact error match" in keyword.match_reasons),
+            technology_filter=bool(payload.filters.technology_ids),
         )
         merged.append(
             SearchResult(
@@ -304,12 +354,19 @@ def execute_hybrid_search(
                 score=round(score, 4),
             )
         )
-    if payload.sort.value == "newest":
-        merged.sort(key=lambda item: (item.updated_at, str(item.solution_id)), reverse=True)
-    else:
-        merged.sort(key=lambda item: (item.score, item.solved_at or item.updated_at.date(), str(item.solution_id)), reverse=True)
-    confidence = merged[0].score if merged else None
-    no_answer = confidence is None or confidence < threshold
+    merged = _finalize_ranked_results(
+        merged,
+        newest=payload.sort.value == "newest",
+        threshold=threshold,
+    )
+    confidence, no_answer = _search_outcome(merged)
     total = len(merged)
     start = (payload.page - 1) * payload.page_size
-    return merged[start : start + payload.page_size], total, int((perf_counter() - started) * 1000), confidence, no_answer
+    return (
+        merged[start : start + payload.page_size],
+        total,
+        int((perf_counter() - started) * 1000),
+        confidence,
+        no_answer,
+        [item.solution_id for item in merged],
+    )

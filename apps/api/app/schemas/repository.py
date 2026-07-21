@@ -178,7 +178,7 @@ class SearchResult(BaseModel):
     updated_at: datetime
     technologies: list[str]
     solver: SearchResultSolver
-    match_reasons: list[str]
+    match_reasons: list[str] = Field(max_length=3)
     score: float
 
 

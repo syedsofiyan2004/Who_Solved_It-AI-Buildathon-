@@ -54,7 +54,6 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `page.solution_body` | Open a solution from search or an approved link. |
 | `page.authoring_body` | Create and edit solution drafts in the authoring workflow. |
 | `page.reviews_body` | Review submitted solutions that are available to you. |
-| `state.coming_soon` | This workflow is not available yet. |
 
 ## Phase 5 keyword search
 
@@ -68,6 +67,8 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `search.summary_available` | Grounded summaries are available for reliable matches. |
 | `search.generate_summary` | Generate grounded summary |
 | `search.sources` | Sources |
+| `search.applied_query` | Results for |
+| `search.verified_results` | Showing verified solutions |
 | `search.keyword_match` | Keyword match |
 | `search.clear` | Clear search |
 | `search.previous_page` | Previous page |
@@ -125,7 +126,10 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `search.team` | Team |
 | `search.result_count` | Matching solutions |
 | `search.summary` | Summary of matching solutions |
-| `search.match_reasons` | Why this matched |
+| `search.applied_query` | Results for |
+| `search.verified_results` | Showing verified solutions |
+| `search.match_reasons` | The server returns up to three signal-derived reasons, such as `Exact error message contains the query`; the interface renders them verbatim. |
+| `state.coming_soon` | This workflow is not available yet. |
 | `search.exact_error` | Exact error match |
 | `search.no_answer_title` | No reliable match was found |
 | `search.no_answer_body` | Add the exact error message, affected technology or environment to improve your search. |
