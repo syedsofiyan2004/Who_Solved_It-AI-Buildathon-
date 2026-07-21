@@ -51,6 +51,7 @@ Create a shareable source archive only with the safe packaging script. It exclud
 
 ```bash
 python apps/api/scripts/package_source.py --output artifacts/knowledge-platform-source.zip
+python apps/api/scripts/verify_source_package.py --archive artifacts/knowledge-platform-source.zip
 ```
 
 Then check:

@@ -13,6 +13,7 @@ All notable project changes are documented here. The format is intentionally lig
 - Corrected the remaining psycopg untyped-array shape, which can arrive as a list of individual PostgreSQL literal characters, so live result tags render as complete technology names.
 - Completed the approved Priority 0-1 correction slice: safe source packaging, expanded path-only secret detection and tests, `main` branch alignment, one retrieval/no-answer threshold, minimum semantic-reason confidence, globally ranked grounding context, and expanded backend/frontend regressions.
 - Restored local Bedrock search by forwarding ignored local AWS credentials to the API service only; the frontend never receives AWS credentials. A live authenticated `Terraform` search now returns verified results.
+- Closed the remaining reviewed Priority 0–1 validation gaps: CI-safe test settings, endpoint-level search metadata coverage, CI-equivalent migration/seed validation under `APP_ENV=test`, and a retained verified source archive with no local environment file or credential-like content.
 
 ### Added - Phase 8 grounded RAG answers
 

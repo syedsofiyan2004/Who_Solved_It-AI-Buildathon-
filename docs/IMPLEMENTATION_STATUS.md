@@ -46,6 +46,14 @@ There are 11 planned phases in total: Phase 0 through Phase 10.
 | 0 | Ignore local env files, isolate local API credentials, scan in CI, document CLI-profile/EC2-role chain | Complete for approved slice | No shared/exported archive was present to remediate; the new tested package script excludes `.env`, dependency/build/upload/cache/virtual-environment/generated paths. The expanded path-only scanner passes locally and is in CI. Local credentials are forwarded only to the API container, never to the web container, and local branch is `main`. |
 | 1 | Technology serialization, draft/applied search state, eligibility floor, deterministic explanations | Complete for approved slice | One `SEARCH_RESULT_THRESHOLD` controls eligibility and no-answer. Semantic explanations require >=0.60, summary context is global-ranked, and all requested API/UI regressions pass. |
 
+### Priority 0–1 final closure validation — 2026-07-21
+
+- **CI test configuration:** settings fixtures now use the fictional `<test-only-jwt-secret>` by default. The development-startup test explicitly sets `APP_ENV=development`; only the production-placeholder rejection test supplies `replace-with-a-long-random-secret-before-starting-the-api`.
+- **API-level search coverage:** authenticated endpoint tests verify complete one- and multiple-technology strings, post-eligibility totals and pagination, deduplication, correct `has_next`, ineligible-result exclusion, and no-answer behavior when no candidate reaches `SEARCH_RESULT_THRESHOLD`.
+- **Exact local CI-equivalent backend run:** with `APP_ENV=test` and `RAG_ENABLED=false`, `ruff check .`, `alembic upgrade head`, and `pytest -q` passed (**30 passed**); `alembic downgrade base`, `alembic upgrade head`, and `python scripts/seed_dev.py` then passed. The final revision is `202607210005 (head)` and the restored fictional corpus contains 24 employees and 36 solutions.
+- **Frontend and source safety:** frontend typecheck, 11 frontend tests, and production build passed. The repository secret scan passed. `artifacts/knowledge-platform-source.zip` was created only through `package_source.py`; `verify_source_package.py` programmatically passed, confirming it contains no `.env`, `.git`, dependency/build/upload/virtual-environment/cache paths, or credential-like readable source content.
+- **Scope boundary:** this closes the reviewed Priority 0 and Priority 1 issues only. Priority 2 and all other Phase 9 work remain unstarted.
+
 ### Local Bedrock search verification — 2026-07-21
 
 - **Observed failure:** browser `POST /api/v1/search` returned HTTP 503 while PostgreSQL and the API health endpoint remained healthy. The UI correctly showed its retryable error state.

@@ -14,7 +14,7 @@ from app.services.embeddings import BedrockEmbeddingAdapter, EmbeddingContentRej
 
 BASE_VALUES = {
     "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
-    "JWT_SECRET": "replace-with-a-long-random-secret-before-starting-the-api",
+    "JWT_SECRET": "<test-only-jwt-secret>",
     "BEDROCK_EMBEDDINGS_ENABLED": True,
     "AWS_REGION": "us-east-1",
     "BEDROCK_EMBEDDING_MODEL_ID": "amazon.titan-embed-text-v2:0",

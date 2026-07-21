@@ -3,6 +3,7 @@ from pathlib import Path
 
 from scripts.package_source import create_source_archive
 from scripts.scan_secrets import scan_repository
+from scripts.verify_source_package import verify_source_archive
 
 
 def test_secret_scanner_reports_only_affected_paths_for_safe_fictional_values(tmp_path: Path):
@@ -38,3 +39,18 @@ def test_source_packaging_excludes_local_and_generated_content(tmp_path: Path):
 
     with zipfile.ZipFile(output) as archive:
         assert archive.namelist() == ["app.py"]
+    assert verify_source_archive(output) == []
+
+
+def test_source_archive_verifier_reports_paths_without_secret_values(tmp_path: Path):
+    archive_path = tmp_path / "unsafe.zip"
+    key = "AK" + "IA" + ("C" * 16)
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr(".env", "ignored-by-verifier")
+        archive.writestr("node_modules/generated.txt", "generated")
+        archive.writestr("secret.txt", key)
+
+    findings = verify_source_archive(archive_path)
+
+    assert findings == [".env", "node_modules/generated.txt", "secret.txt"]
+    assert all(key not in finding for finding in findings)

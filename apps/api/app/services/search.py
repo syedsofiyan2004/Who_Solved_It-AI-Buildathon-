@@ -36,13 +36,14 @@ def _technology_names(value: object) -> list[str]:
             text = text[1:-1]
         return [item.strip() for item in next(csv.reader([text]), []) if item.strip()]
     if isinstance(value, (list, tuple)):
-        items = [str(item) for item in value if str(item).strip()]
+        raw_items = [str(item) for item in value]
         # psycopg can return an untyped array aggregate as the individual
         # characters of its PostgreSQL literal, for example ['{', 'OIDC', '}']
         # or ['{', 'O', 'I', 'D', 'C', '}']. Normalize that shape recursively.
-        if len(items) >= 2 and items[0] == "{" and items[-1] == "}":
-            return _technology_names("".join(items))
-        return items
+        # Preserve whitespace characters while reconstructing that literal.
+        if len(raw_items) >= 2 and raw_items[0] == "{" and raw_items[-1] == "}":
+            return _technology_names("".join(raw_items))
+        return [item for item in raw_items if item.strip()]
     return [str(value)]
 
 

@@ -36,20 +36,27 @@ def repository_fixture():
     department = Department(id=uuid4(), name=f"Engineering {suffix}", slug=f"engineering-{suffix}")
     team = Team(id=uuid4(), department_id=department.id, name=f"Platform {suffix}", slug=f"platform-{suffix}")
     technology = Technology(id=uuid4(), name=f"Python {suffix}", slug=f"python-{suffix}", category="language")
+    secondary_technology = Technology(id=uuid4(), name=f"Docker {suffix}", slug=f"docker-{suffix}", category="platform")
     users = {
         "author": User(id=uuid4(), email=f"author-{suffix}@example.test", password_hash=hash_password("correct-password"), role=AppRole.EMPLOYEE, is_active=True),
         "reviewer": User(id=uuid4(), email=f"reviewer-{suffix}@example.test", password_hash=hash_password("correct-password"), role=AppRole.REVIEWER, is_active=True),
         "outsider": User(id=uuid4(), email=f"outsider-{suffix}@example.test", password_hash=hash_password("correct-password"), role=AppRole.EMPLOYEE, is_active=True),
     }
     with SessionLocal() as db:
-        db.add_all([department, team, technology, *users.values()])
+        db.add_all([department, team, technology, secondary_technology, *users.values()])
         db.flush()
         db.add_all([
             EmployeeProfile(user_id=user.id, display_name=key.title(), job_title="Engineer", department_id=department.id, team_id=team.id, contact_email=user.email)
             for key, user in users.items()
         ])
         db.commit()
-    yield {"department": department, "team": team, "technology": technology, "users": users}
+    yield {
+        "department": department,
+        "team": team,
+        "technology": technology,
+        "secondary_technology": secondary_technology,
+        "users": users,
+    }
     ids = [user.id for user in users.values()]
     with SessionLocal() as db:
         attachment_keys = list(
@@ -65,7 +72,7 @@ def repository_fixture():
         db.execute(delete(RevokedToken).where(RevokedToken.user_id.in_(ids)))
         db.execute(delete(EmployeeProfile).where(EmployeeProfile.user_id.in_(ids)))
         db.execute(delete(User).where(User.id.in_(ids)))
-        db.execute(delete(Technology).where(Technology.id == technology.id))
+        db.execute(delete(Technology).where(Technology.id.in_([technology.id, secondary_technology.id])))
         db.execute(delete(Team).where(Team.id == team.id))
         db.execute(delete(Department).where(Department.id == department.id))
         db.commit()
@@ -118,6 +125,68 @@ class _FakeGroundedGenerationAdapter:
         type(self).calls += 1
         source_id = sources[0].solution_id
         return GroundedAnswer(summary=f"Use the verified technical resolution. [{source_id}]", citations=[source_id])
+
+
+def _create_verified_search_record(repository_fixture, *, title: str, exact_error: str, technology_ids: list):
+    """Insert an authorized verified record for endpoint-search regression tests."""
+    challenge_id, solution_id = uuid4(), uuid4()
+    owner = repository_fixture["users"]["author"]
+    with SessionLocal() as db:
+        db.add_all(
+            [
+                Challenge(
+                    id=challenge_id,
+                    title=title,
+                    problem_description=f"Controlled endpoint-search problem: {exact_error}",
+                    symptoms="A deterministic test symptom.",
+                    exact_error_message=exact_error,
+                    environment="Test environment",
+                    status=ContentStatus.VERIFIED,
+                    visibility=VisibilityLevel.COMPANY,
+                    department_id=repository_fixture["department"].id,
+                    team_id=repository_fixture["team"].id,
+                    owner_user_id=owner.id,
+                    created_by_user_id=owner.id,
+                    updated_by_user_id=owner.id,
+                ),
+                Solution(
+                    id=solution_id,
+                    challenge_id=challenge_id,
+                    root_cause="Controlled endpoint-search root cause.",
+                    resolution_steps=["Apply the controlled resolution."],
+                    code_snippets=[],
+                    prevention_notes=None,
+                    status=ContentStatus.VERIFIED,
+                    primary_owner_user_id=owner.id,
+                ),
+                *[
+                    ChallengeTechnology(challenge_id=challenge_id, technology_id=technology_id)
+                    for technology_id in technology_ids
+                ],
+            ]
+        )
+        db.commit()
+    return SimpleNamespace(challenge_id=challenge_id, solution_id=solution_id)
+
+
+def _keyword_candidate(record, *, score: float) -> SearchResult:
+    return SearchResult(
+        challenge_id=record.challenge_id,
+        solution_id=record.solution_id,
+        title="Controlled candidate",
+        problem_excerpt="Controlled problem",
+        root_cause_excerpt="Controlled cause",
+        resolution_steps=["Controlled resolution"],
+        exact_error_message=None,
+        status=ContentStatus.VERIFIED,
+        visibility=VisibilityLevel.COMPANY,
+        solved_at=None,
+        updated_at=datetime.now(UTC),
+        technologies=[],
+        solver={"user_id": uuid4(), "display_name": "Controlled", "job_title": "Engineer"},
+        match_reasons=["Keyword match"],
+        score=score,
+    )
 
 
 def test_author_draft_submit_review_and_authorized_detail(repository_fixture):
@@ -288,3 +357,128 @@ def test_grounded_summary_uses_global_ranked_sources_not_only_current_page(repos
 
     assert searched.status_code == 200
     assert captured["solution_ids"] == globally_ranked_ids[:3]
+
+
+def test_search_api_serializes_one_and_multiple_complete_technology_names(repository_fixture, monkeypatch):
+    """The endpoint must never leak PostgreSQL array literals or character arrays."""
+    monkeypatch.setattr("app.api.search.BedrockEmbeddingAdapter", _FakeEmbeddingAdapter)
+    client = TestClient(create_app())
+    headers = _headers(client, repository_fixture["users"]["outsider"].email)
+    one_technology = _create_verified_search_record(
+        repository_fixture,
+        title="One complete technology API result",
+        exact_error="endpoint-one-technology-marker",
+        technology_ids=[repository_fixture["technology"].id],
+    )
+    multiple_technologies = _create_verified_search_record(
+        repository_fixture,
+        title="Multiple complete technologies API result",
+        exact_error="endpoint-multiple-technologies-marker",
+        technology_ids=[repository_fixture["technology"].id, repository_fixture["secondary_technology"].id],
+    )
+
+    one_response = client.post(
+        "/api/v1/search",
+        headers=headers,
+        json={"query": "endpoint-one-technology-marker", "include_summary": False},
+    )
+    assert one_response.status_code == 200
+    one_result = next(
+        result for result in one_response.json()["data"]["results"] if result["solution_id"] == str(one_technology.solution_id)
+    )
+    assert one_result["technologies"] == [repository_fixture["technology"].name]
+
+    multiple_response = client.post(
+        "/api/v1/search",
+        headers=headers,
+        json={"query": "endpoint-multiple-technologies-marker", "include_summary": False},
+    )
+    assert multiple_response.status_code == 200
+    multiple_result = next(
+        result
+        for result in multiple_response.json()["data"]["results"]
+        if result["solution_id"] == str(multiple_technologies.solution_id)
+    )
+    assert set(multiple_result["technologies"]) == {
+        repository_fixture["technology"].name,
+        repository_fixture["secondary_technology"].name,
+    }
+    assert all(len(name) > 1 for name in multiple_result["technologies"])
+
+
+def test_search_api_applies_eligibility_before_pagination_and_reports_no_answer(repository_fixture, monkeypatch):
+    """Endpoint metadata must derive from the eligible, deduplicated result set."""
+    monkeypatch.setattr("app.api.search.BedrockEmbeddingAdapter", _FakeEmbeddingAdapter)
+    client = TestClient(create_app())
+    headers = _headers(client, repository_fixture["users"]["outsider"].email)
+    eligible_first = _create_verified_search_record(
+        repository_fixture,
+        title="First eligible endpoint result",
+        exact_error="endpoint-eligibility-marker-one",
+        technology_ids=[repository_fixture["technology"].id],
+    )
+    eligible_second = _create_verified_search_record(
+        repository_fixture,
+        title="Second eligible endpoint result",
+        exact_error="endpoint-eligibility-marker-two",
+        technology_ids=[repository_fixture["technology"].id],
+    )
+    ineligible = _create_verified_search_record(
+        repository_fixture,
+        title="Ineligible endpoint result",
+        exact_error="endpoint-eligibility-marker-three",
+        technology_ids=[repository_fixture["technology"].id],
+    )
+
+    candidates = [
+        _keyword_candidate(eligible_first, score=0.2),
+        _keyword_candidate(eligible_first, score=1.0),
+        _keyword_candidate(eligible_second, score=0.8),
+        _keyword_candidate(ineligible, score=0.0),
+    ]
+    monkeypatch.setattr(
+        "app.services.search.execute_keyword_search",
+        lambda *args, **kwargs: (candidates, len(candidates), 0),
+    )
+
+    first_page = client.post(
+        "/api/v1/search",
+        headers=headers,
+        json={"query": "eligible endpoint records", "page": 1, "page_size": 1, "include_summary": False},
+    )
+    assert first_page.status_code == 200
+    first_payload = first_page.json()
+    assert first_payload["meta"] == {"page": 1, "page_size": 1, "total": 2, "has_next": True}
+    assert first_payload["data"]["no_answer"] is False
+    assert first_payload["data"]["results"][0]["solution_id"] == str(eligible_first.solution_id)
+
+    second_page = client.post(
+        "/api/v1/search",
+        headers=headers,
+        json={"query": "eligible endpoint records", "page": 2, "page_size": 1, "include_summary": False},
+    )
+    assert second_page.status_code == 200
+    second_payload = second_page.json()
+    assert second_payload["meta"] == {"page": 2, "page_size": 1, "total": 2, "has_next": False}
+    assert second_payload["data"]["results"][0]["solution_id"] == str(eligible_second.solution_id)
+    returned_ids = {
+        first_payload["data"]["results"][0]["solution_id"],
+        second_payload["data"]["results"][0]["solution_id"],
+    }
+    assert returned_ids == {str(eligible_first.solution_id), str(eligible_second.solution_id)}
+    assert str(ineligible.solution_id) not in returned_ids
+
+    monkeypatch.setattr(
+        "app.services.search.execute_keyword_search",
+        lambda *args, **kwargs: ([_keyword_candidate(ineligible, score=0.0)], 1, 0),
+    )
+    no_answer = client.post(
+        "/api/v1/search",
+        headers=headers,
+        json={"query": "ineligible endpoint record", "page": 1, "page_size": 1, "include_summary": False},
+    )
+    assert no_answer.status_code == 200
+    no_answer_payload = no_answer.json()
+    assert no_answer_payload["data"]["no_answer"] is True
+    assert no_answer_payload["data"]["results"] == []
+    assert no_answer_payload["meta"] == {"page": 1, "page_size": 1, "total": 0, "has_next": False}

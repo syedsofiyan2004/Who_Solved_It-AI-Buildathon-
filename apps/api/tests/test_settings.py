@@ -6,12 +6,12 @@ from app.core.config import Settings
 
 BASE_VALUES = {
     "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
-    "JWT_SECRET": "replace-with-a-long-random-secret-before-starting-the-api",
+    "JWT_SECRET": "<test-only-jwt-secret>",
 }
 
 
 def test_development_can_start_before_bedrock_is_configured():
-    settings = Settings(**BASE_VALUES, RAG_ENABLED=False)
+    settings = Settings(**BASE_VALUES, APP_ENV="development", RAG_ENABLED=False)
 
     assert settings.rag_enabled is False
     assert settings.bedrock_status == "disabled_until_configured"
@@ -53,7 +53,11 @@ def test_embeddings_enabled_requires_its_own_model_configuration():
 
 def test_production_rejects_placeholder_jwt_secret():
     with pytest.raises(ValidationError):
-        Settings(**BASE_VALUES, APP_ENV="production", RAG_ENABLED=False)
+        Settings(
+            **{**BASE_VALUES, "JWT_SECRET": "replace-with-a-long-random-secret-before-starting-the-api"},
+            APP_ENV="production",
+            RAG_ENABLED=False,
+        )
 
 
 def test_one_search_threshold_is_configured_for_eligibility_and_no_answer():
