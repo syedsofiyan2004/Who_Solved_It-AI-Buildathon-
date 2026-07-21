@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-knowledge_platform}
+      POSTGRES_USER: ${POSTGRES_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: ${APP_NAME:-Technical Knowledge and Expert Discovery Platform}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      WEB_URL: ${WEB_URL:-http://localhost:5173}
+      API_URL: ${API_URL:-http://localhost:8000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://app_user:local_password@postgres:5432/knowledge_platform}
+      JWT_SECRET: ${JWT_SECRET:-replace-with-a-long-random-secret-before-starting-the-api}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
+      JWT_ISSUER: ${JWT_ISSUER:-knowledge-platform-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-knowledge-platform-web}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_PROFILE: ${AWS_PROFILE:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      BEDROCK_EMBEDDING_MODEL_ID: ${BEDROCK_EMBEDDING_MODEL_ID:-}
+      BEDROCK_EMBEDDING_PROVIDER: ${BEDROCK_EMBEDDING_PROVIDER:-auto}
+      BEDROCK_EMBEDDING_DIMENSIONS: ${BEDROCK_EMBEDDING_DIMENSIONS:-}
+      BEDROCK_EMBEDDINGS_ENABLED: ${BEDROCK_EMBEDDINGS_ENABLED:-false}
+      BEDROCK_CHAT_MODEL_ID: ${BEDROCK_CHAT_MODEL_ID:-}
+      BEDROCK_GENERATION_MAX_TOKENS: ${BEDROCK_GENERATION_MAX_TOKENS:-500}
+      SEARCH_RESULT_LIMIT: ${SEARCH_RESULT_LIMIT:-10}
+      SEARCH_SIMILARITY_THRESHOLD: ${SEARCH_SIMILARITY_THRESHOLD:-0.35}
+      RAG_ENABLED: ${RAG_ENABLED:-false}
+      RAG_MAX_CONTEXT_SOLUTIONS: ${RAG_MAX_CONTEXT_SOLUTIONS:-3}
+      UPLOAD_PROVIDER: ${UPLOAD_PROVIDER:-local}
+      UPLOAD_DIRECTORY: ${UPLOAD_DIRECTORY:-/app/uploads}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
+      ALLOWED_UPLOAD_TYPES: ${ALLOWED_UPLOAD_TYPES:-text/plain,text/markdown,application/pdf}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      RATE_LIMIT_SEARCH_PER_MINUTE: ${RATE_LIMIT_SEARCH_PER_MINUTE:-30}
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./apps/api/app:/app/app
+      - ./apps/api/alembic:/app/alembic
+      - ./apps/api/scripts:/app/scripts
+      - ./apps/api/tests:/app/tests
+      - api_uploads:/app/uploads
+    command: >
+      sh -c "alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    volumes:
+      - ./apps/web/src:/app/src
+      - ./apps/web/index.html:/app/index.html
+      - ./apps/web/tailwind.config.ts:/app/tailwind.config.ts
+      - ./apps/web/vite.config.ts:/app/vite.config.ts
+
+volumes:
+  postgres_data:
+  api_uploads:
