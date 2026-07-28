@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
 import csv
+from datetime import UTC, datetime
 from time import perf_counter
 from uuid import UUID
 
@@ -11,19 +11,28 @@ from app.models.repository import (
     Challenge,
     ChallengeTechnology,
     ContentStatus,
+    Department,
     EmployeeProfile,
+    PgVector,
     SearchQuery,
     Solution,
     SolutionEmbedding,
+    Team,
     Technology,
 )
-from app.models.repository import PgVector
 from app.schemas.repository import SearchRequest, SearchResult
-from app.services.embeddings import BedrockEmbeddingAdapter
+from app.services.embeddings import EmbeddingAdapter
 from app.services.repository import can_view_challenge
 
-
 SEMANTIC_MATCH_REASON_MINIMUM = 0.60
+SEARCH_SIGNAL_WEIGHTS = {
+    "semantic": 0.40,
+    "fts": 0.25,
+    "exact_error": 0.20,
+    "technology": 0.05,
+    "verification": 0.05,
+    "recency": 0.02,
+}
 
 
 def _technology_names(value: object) -> list[str]:
@@ -47,6 +56,43 @@ def _technology_names(value: object) -> list[str]:
     return [str(value)]
 
 
+def _initials(display_name: str) -> str:
+    parts = [part for part in display_name.replace("-", " ").split() if part]
+    return "".join(part[0].upper() for part in parts[:2]) or "?"
+
+
+def _profile_context(db: Session, profiles: list[EmployeeProfile]) -> dict[UUID, tuple[str | None, str | None]]:
+    team_ids = {profile.team_id for profile in profiles if profile.team_id is not None}
+    department_ids = {profile.department_id for profile in profiles if profile.department_id is not None}
+    teams = {
+        team.id: team.name
+        for team in db.scalars(select(Team).where(Team.id.in_(team_ids))).all()
+    } if team_ids else {}
+    departments = {
+        department.id: department.name
+        for department in db.scalars(select(Department).where(Department.id.in_(department_ids))).all()
+    } if department_ids else {}
+    return {
+        profile.user_id: (teams.get(profile.team_id), departments.get(profile.department_id))
+        for profile in profiles
+    }
+
+
+def _solver_payload(profile: EmployeeProfile, context: dict[UUID, tuple[str | None, str | None]]) -> dict:
+    team, department = context.get(profile.user_id, (None, None))
+    return {
+        "user_id": profile.user_id,
+        "display_name": profile.display_name,
+        "job_title": profile.job_title,
+        "team": team,
+        "department": department,
+        "avatar_key": profile.avatar_key,
+        "initials": _initials(profile.display_name),
+        "contact_email": profile.contact_email,
+        "contact_handle": profile.contact_handle,
+    }
+
+
 def _match_reasons(*, semantic: float, has_keyword: bool, exact: bool, technology_filter: bool) -> list[str]:
     """Return stable, user-facing explanations for the retrieval signals used."""
     reasons: list[str] = []
@@ -59,6 +105,46 @@ def _match_reasons(*, semantic: float, has_keyword: bool, exact: bool, technolog
     if semantic >= SEMANTIC_MATCH_REASON_MINIMUM:
         reasons.append("Similar technical context")
     return reasons[:3]
+
+
+def _bounded_signal(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def _validate_signal_weights() -> None:
+    total = sum(SEARCH_SIGNAL_WEIGHTS.values())
+    if total <= 0 or total > 1:
+        raise ValueError("Search ranking signal weights must have a total in the range (0, 1].")
+    if any(weight < 0 for weight in SEARCH_SIGNAL_WEIGHTS.values()):
+        raise ValueError("Search ranking signal weights must not be negative.")
+
+
+def _hybrid_score(
+    *,
+    semantic: float,
+    fts: float,
+    exact_error: float,
+    technology: float,
+    verification: float,
+    recency: float,
+    has_semantic: bool,
+    has_keyword: bool,
+    has_technology_filter: bool,
+) -> float:
+    """Apply documented search signals once, reweighting only available channels."""
+    _validate_signal_weights()
+    channels = [
+        (_bounded_signal(semantic), SEARCH_SIGNAL_WEIGHTS["semantic"], has_semantic),
+        (_bounded_signal(fts), SEARCH_SIGNAL_WEIGHTS["fts"], has_keyword),
+        (_bounded_signal(exact_error), SEARCH_SIGNAL_WEIGHTS["exact_error"], has_keyword),
+        (_bounded_signal(technology), SEARCH_SIGNAL_WEIGHTS["technology"], has_technology_filter),
+        (_bounded_signal(verification), SEARCH_SIGNAL_WEIGHTS["verification"], True),
+        (_bounded_signal(recency), SEARCH_SIGNAL_WEIGHTS["recency"], True),
+    ]
+    active_weight = sum(weight for _, weight, available in channels if available)
+    if active_weight <= 0:
+        return 0.0
+    return sum(value * weight for value, weight, available in channels if available) / active_weight
 
 
 def _finalize_ranked_results(
@@ -97,10 +183,9 @@ def execute_keyword_search(db: Session, *, user: User, payload: SearchRequest) -
     ts_query = func.websearch_to_tsquery("english", payload.query)
     normalized_query = payload.query.lower()
     exact_contains = func.strpos(func.lower(func.coalesce(Challenge.exact_error_message, "")), normalized_query) > 0
-    exact_similarity = func.similarity(func.coalesce(Challenge.exact_error_message, ""), payload.query)
     rank = func.ts_rank_cd(Challenge.search_document, ts_query)
     statement = (
-        select(Challenge, Solution, EmployeeProfile, rank.label("rank"), exact_contains.label("exact"), exact_similarity.label("similarity"))
+        select(Challenge, Solution, EmployeeProfile, rank.label("rank"), exact_contains.label("exact"))
         .join(Solution, and_(Solution.challenge_id == Challenge.id, Solution.deleted_at.is_(None)))
         .join(EmployeeProfile, and_(EmployeeProfile.user_id == Challenge.owner_user_id, EmployeeProfile.deleted_at.is_(None)))
         .where(
@@ -134,9 +219,10 @@ def execute_keyword_search(db: Session, *, user: User, payload: SearchRequest) -
         .group_by(ChallengeTechnology.challenge_id)
     ).all() if authorized else []
     technology_names = {challenge_id: _technology_names(names) for challenge_id, names in technology_rows}
+    profile_context = _profile_context(db, [row.EmployeeProfile for row in authorized])
 
     def score(row) -> float:
-        return (1.0 + float(row.similarity or 0)) if row.exact else float(row.rank or 0)
+        return float(row.rank or 0)
 
     if payload.sort.value == "newest":
         authorized.sort(key=lambda row: row.Challenge.updated_at, reverse=True)
@@ -161,7 +247,7 @@ def execute_keyword_search(db: Session, *, user: User, payload: SearchRequest) -
             solved_at=solution.solved_at,
             updated_at=challenge.updated_at,
             technologies=technology_names.get(challenge.id, []),
-            solver={"user_id": challenge.owner_user_id, "display_name": profile.display_name, "job_title": profile.job_title},
+            solver=_solver_payload(profile, profile_context),
             match_reasons=reasons,
             score=round(score(row), 4),
         ))
@@ -206,17 +292,17 @@ def execute_hybrid_search(
     *,
     user: User,
     payload: SearchRequest,
-    adapter: BedrockEmbeddingAdapter,
+    adapter: EmbeddingAdapter,
     threshold: float,
 ) -> tuple[list[SearchResult], int, int, float | None, bool, list[UUID]]:
-    """Merge authorized Bedrock vector, FTS, and exact-error candidates.
+    """Merge authorized vector, FTS, and exact-error candidates.
 
     A keyword candidate remains eligible when a verified record is awaiting its
     embedding. That preserves the approved keyword fallback while embedding
     jobs catch up after a review or content edit.
     """
     started = perf_counter()
-    query_vector = adapter.embed(payload.query)
+    query_vector = adapter.embed(payload.query, input_type="query")
     candidate_payload = payload.model_copy(update={"page": 1, "page_size": 20})
     keyword_results, _, _ = execute_keyword_search(db, user=user, payload=candidate_payload)
     vector_score = (
@@ -239,7 +325,7 @@ def execute_hybrid_search(
             SolutionEmbedding,
             and_(
                 SolutionEmbedding.solution_id == Solution.id,
-                SolutionEmbedding.embedding_model == adapter.settings.bedrock_embedding_model_id,
+                SolutionEmbedding.embedding_model == adapter.model_id,
             ),
         )
         .where(Challenge.deleted_at.is_(None))
@@ -300,32 +386,33 @@ def execute_hybrid_search(
         else []
     )
     technologies = {challenge_id: _technology_names(names) for challenge_id, names in technology_rows}
+    profile_context = _profile_context(
+        db,
+        [profile for _, _, profile, _ in candidates.values()],
+    )
     keyword_by_solution = {result.solution_id: result for result in keyword_results}
     max_keyword = max((result.score for result in keyword_results), default=1.0) or 1.0
     merged: list[SearchResult] = []
     for challenge, solution, profile, raw_semantic in candidates.values():
         keyword = keyword_by_solution.get(solution.id)
-        semantic = (
-            max(0.0, min(1.0, raw_semantic))
-            if raw_semantic is not None
-            else 0.0
-        )
+        semantic = _bounded_signal(raw_semantic) if raw_semantic is not None else 0.0
         fts = min(1.0, keyword.score / max_keyword) if keyword else 0.0
         exact = 1.0 if keyword and "Exact error match" in keyword.match_reasons else 0.0
         technology = 1.0 if payload.filters.technology_ids else 0.0
         verification = 1.0 if challenge.status == ContentStatus.VERIFIED else 0.0
         age_days = max(0, (datetime.now(UTC) - challenge.updated_at).days)
         recency = max(0.0, 1.0 - age_days / 3650)
-        channels = [
-            (semantic, 0.40, raw_semantic is not None),
-            (fts, 0.25, keyword is not None),
-            (exact, 0.20, keyword is not None),
-            (technology, 0.05, bool(payload.filters.technology_ids)),
-            (verification, 0.05, True),
-            (recency, 0.02, True),
-        ]
-        active_weight = sum(weight for _, weight, available in channels if available)
-        score = sum(value * weight for value, weight, available in channels if available) / active_weight
+        score = _hybrid_score(
+            semantic=semantic,
+            fts=fts,
+            exact_error=exact,
+            technology=technology,
+            verification=verification,
+            recency=recency,
+            has_semantic=raw_semantic is not None,
+            has_keyword=keyword is not None,
+            has_technology_filter=bool(payload.filters.technology_ids),
+        )
         reasons = _match_reasons(
             semantic=semantic,
             has_keyword=keyword is not None,
@@ -346,11 +433,7 @@ def execute_hybrid_search(
                 solved_at=solution.solved_at,
                 updated_at=challenge.updated_at,
                 technologies=technologies.get(challenge.id, []),
-                solver={
-                    "user_id": challenge.owner_user_id,
-                    "display_name": profile.display_name,
-                    "job_title": profile.job_title,
-                },
+                solver=_solver_payload(profile, profile_context),
                 match_reasons=reasons,
                 score=round(score, 4),
             )

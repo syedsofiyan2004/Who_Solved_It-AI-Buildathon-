@@ -4,7 +4,6 @@ import re
 import sys
 from pathlib import Path
 
-
 EXCLUDED_DIRECTORIES = {
     ".git", ".venv", ".cache", "__pycache__", "coverage", "dist", "htmlcov", "node_modules",
     ".pytest_cache", ".ruff_cache", "uploads",
@@ -54,7 +53,7 @@ def scan_repository(root: Path) -> list[Path]:
     """Return affected relative paths only; never include matched content."""
     findings: list[Path] = []
     for path in root.rglob("*"):
-        if not path.is_file() or path.name in EXCLUDED_FILENAMES or any(
+        if not path.is_file() or path.name in EXCLUDED_FILENAMES or path.suffix in {".tsbuildinfo"} or any(
             part in EXCLUDED_DIRECTORIES for part in path.parts
         ):
             continue

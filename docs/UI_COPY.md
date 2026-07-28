@@ -1,15 +1,18 @@
 # Approved Static UI Copy
 
-All static visible UI strings must use these IDs. Dynamic values, API error details, and Bedrock-generated search summaries are exceptions only where `UI_SPEC.md` permits them. Do not add marketing copy or placeholder prose without updating this file and obtaining normal review.
+All static visible UI strings must use these IDs. Dynamic values, API error details, and AI-generated search summaries are exceptions only where `UI_SPEC.md` permits them. Do not add marketing copy or placeholder prose without updating this file and obtaining normal review.
 
 ## Navigation and global actions
 
 | ID | Text |
 |---|---|
-| `nav.dashboard` | Dashboard |
+| `nav.dashboard` | Home |
 | `nav.search` | Search solutions |
 | `nav.submit` | Log a solved problem |
+| `nav.contributions` | My contributions |
+| `nav.drafts` | Drafts |
 | `nav.reviews` | Reviews |
+| `nav.people` | People |
 | `nav.profile` | My profile |
 | `nav.settings` | Administration |
 | `action.search` | Search |
@@ -23,8 +26,13 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `action.retry` | Try again |
 | `action.clear_filters` | Clear filters |
 | `action.view_solution` | View solution |
+| `action.preview_solution` | Preview |
+| `action.open_full_solution` | Open full solution |
 | `action.view_profile` | View profile |
+| `action.view_solver_panel` | View solver |
+| `action.open_full_profile` | Open full profile |
 | `action.contact_solver` | Contact the solver |
+| `action.edit_solution` | Edit solution |
 | `action.copy_code` | Copy code |
 | `action.copied` | Copied |
 | `action.sign_out` | Sign out |
@@ -42,6 +50,11 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `shell.open_user_menu` | Open user menu |
 | `shell.primary_navigation` | Primary navigation |
 | `shell.mobile_navigation` | Mobile navigation |
+| `shell.workspace_group` | Workspace |
+| `shell.knowledge_group` | Knowledge |
+| `shell.collaboration_group` | Collaboration |
+| `shell.admin_group` | Administration |
+| `shell.signed_in_as` | Signed in as |
 | `command.title` | Search and commands |
 | `command.hint` | Type to search pages and actions |
 | `command.no_results` | No matching commands |
@@ -79,19 +92,24 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | ID | Text |
 |---|---|
 | `login.title` | Sign in to the knowledge platform |
+| `login.statement` | Find the solution your company already has. |
 | `login.email` | Work email |
 | `login.password` | Password |
 | `login.submit` | Sign in |
 | `login.invalid` | We could not sign you in with those details. |
 | `login.submitting` | Signing in |
-| `login.description` | Use your approved work account to access internal technical knowledge. |
+| `login.description` | Search verified technical fixes, understand what worked, and reach the colleague who solved it. |
+| `login.internal_only` | Approved internal access only |
 | `login.email_invalid` | Enter a valid work email address. |
 | `login.password_invalid` | Enter a password between 8 and 128 characters. |
-| `dashboard.title` | Find a past solution |
+| `dashboard.title` | What are you blocked on? |
 | `dashboard.search_hint` | Describe the problem, error message, technology, or environment. |
 | `dashboard.log_prompt` | Solved something worth sharing? |
 | `dashboard.log_action` | Log a solved problem |
 | `dashboard.recent` | Recent verified solutions |
+| `dashboard.drafts` | Your drafts |
+| `dashboard.reviews` | Awaiting your review |
+| `dashboard.continue` | Continue where you left off |
 | `dashboard.empty` | No verified solutions are available to you yet. |
 
 ## Phase 1 foundation shell
@@ -129,7 +147,7 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `search.applied_query` | Results for |
 | `search.verified_results` | Showing verified solutions |
 | `search.match_reasons` | The server returns up to three signal-derived reasons, such as `Exact error message contains the query`; the interface renders them verbatim. |
-| `state.coming_soon` | This workflow is not available yet. |
+| `state.coming_soon` | This area is not available in your current workspace. |
 | `search.exact_error` | Exact error match |
 | `search.no_answer_title` | No reliable match was found |
 | `search.no_answer_body` | Add the exact error message, affected technology or environment to improve your search. |
@@ -139,6 +157,12 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `search.error_body` | Check your connection and try again. |
 | `search.bedrock_unavailable` | Semantic search and summaries are temporarily unavailable. Keyword matches may still be available. |
 | `search.preview` | Preview solution |
+| `search.matched_passage` | Matched passage |
+| `search.match_reasons` | Match reasons |
+| `search.match_strength` | Match strength |
+| `search.strength_strong` | Strong |
+| `search.strength_medium` | Medium |
+| `search.strength_low` | Low |
 | `search.sources` | Sources |
 | `search.result_unverified` | Not yet verified |
 | `search.result_verified` | Verified |
@@ -169,6 +193,11 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `submit.duplicate_title` | Similar past solutions were found |
 | `submit.duplicate_body` | Review these records before submitting a duplicate solution. |
 | `review.title` | Review submitted solutions |
+| `review.filter` | Filter submissions |
+| `review.sort` | Sort submissions |
+| `review.sort_oldest` | Oldest first |
+| `review.sort_newest` | Newest first |
+| `review.no_filtered_results` | No submissions match this filter. |
 | `review.verify` | Verify solution |
 | `review.request_changes` | Request changes |
 | `review.reject` | Reject submission |
@@ -182,18 +211,38 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 |---|---|
 | `detail.problem` | Problem |
 | `detail.symptoms` | Symptoms |
+| `detail.environment` | Technical environment |
+| `detail.exact_error` | Exact error |
 | `detail.root_cause` | Root cause |
 | `detail.resolution` | Resolution |
 | `detail.code` | Code and commands |
+| `detail.copy_code` | Copy code |
+| `detail.copied` | Copied |
+| `detail.attachments` | Attachments |
+| `detail.review_timeline` | Review timeline |
+| `detail.related` | Related solutions |
+| `detail.technologies` | Technologies |
+| `detail.verified` | Verified |
+| `detail.unverified` | Unverified |
 | `detail.solved_by` | Solved by |
 | `detail.verified_by` | Verified by |
 | `detail.visibility` | Visibility |
 | `detail.feedback_prompt` | Did this solution help? |
+| `detail.feedback_comment` | Optional comment |
 | `detail.feedback_thanks` | Thanks for the feedback. |
 | `profile.title` | Employee profile |
-| `profile.skills` | Technical skills |
+| `profile.contact` | Approved contact |
+| `profile.team` | Team |
+| `profile.department` | Department |
+| `profile.skills` | Skills |
+| `profile.technologies` | Technologies |
 | `profile.solutions` | Verified solutions |
-| `profile.empty` | No verified solutions are available on this profile. |
+| `profile.relevant_solutions` | Relevant solutions |
+| `profile.contributions` | Contributions |
+| `profile.helpful` | Helpful contributions |
+| `profile.empty_skills` | No skills are listed yet. |
+| `profile.empty_solutions` | No verified solutions are available to you for this employee yet. |
+| `profile.empty_tags` | No technologies are associated with visible verified solutions yet. |
 | `state.loading` | Loading |
 | `state.saving` | Saving |
 | `state.submitting` | Submitting |

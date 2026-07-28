@@ -11,4 +11,10 @@ coverage/
 *.pyc
 uploads/
 artifacts/
+*.zip
 .DS_Store
+*.tsbuildinfo
+apps/web/vite.config.js
+apps/web/vite.config.d.ts
+apps/web/tailwind.config.js
+apps/web/tailwind.config.d.ts

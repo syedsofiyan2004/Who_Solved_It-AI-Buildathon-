@@ -11,17 +11,43 @@ from app.models.auth import User
 from app.models.repository import SearchQuery
 from app.schemas.repository import SearchLogResponse, SearchRequest
 from app.services.audit import audit_event
-from app.services.embeddings import BedrockEmbeddingAdapter, EmbeddingContentRejected, EmbeddingUnavailable
+from app.services.embeddings import (
+    BedrockEmbeddingAdapter,
+    EmbeddingContentRejected,
+    EmbeddingUnavailable,
+    NvidiaEmbeddingAdapter,
+)
 from app.services.grounded_generation import (
     BedrockGroundedGenerationAdapter,
     GroundedGenerationInvalid,
     GroundedGenerationUnavailable,
+    NvidiaGroundedGenerationAdapter,
     build_grounding_sources,
 )
-from app.services.search import can_read_search_log, create_search_log, execute_hybrid_search
-
+from app.services.search import (
+    can_read_search_log,
+    create_search_log,
+    execute_hybrid_search,
+    execute_keyword_search,
+)
 
 router = APIRouter(tags=["hybrid search"])
+
+
+def _embedding_adapter(settings: Settings):
+    if settings.effective_ai_provider == "nvidia":
+        return NvidiaEmbeddingAdapter(settings)
+    if settings.effective_ai_provider == "bedrock":
+        return BedrockEmbeddingAdapter(settings)
+    raise EmbeddingUnavailable("Semantic search is disabled until an embedding provider is configured.")
+
+
+def _generation_adapter(settings: Settings):
+    if settings.effective_ai_provider == "nvidia":
+        return NvidiaGroundedGenerationAdapter(settings)
+    if settings.effective_ai_provider == "bedrock":
+        return BedrockGroundedGenerationAdapter(settings)
+    raise GroundedGenerationUnavailable("Grounded summaries are disabled until an AI provider is configured.")
 
 
 @router.post("/search", response_model=dict)
@@ -33,31 +59,38 @@ def search_solutions(
     settings: Settings = Depends(get_settings),
 ):
     search_rate_limiter.check(f"search:{current_user.id}", limit=settings.rate_limit_search_per_minute)
+    semantic_status = "available"
     try:
         results, total, latency_ms, confidence, no_answer, ranked_solution_ids = execute_hybrid_search(
             db,
             user=current_user,
             payload=payload,
-            adapter=BedrockEmbeddingAdapter(settings),
+            adapter=_embedding_adapter(settings),
             threshold=settings.search_result_threshold,
         )
     except EmbeddingContentRejected as exc:
         raise HTTPException(status_code=422, detail={"code": "unsafe_search_content", "message": str(exc)}) from exc
-    except EmbeddingUnavailable as exc:
-        raise HTTPException(status_code=503, detail={"code": "semantic_search_unavailable", "message": str(exc)}) from exc
+    except EmbeddingUnavailable:
+        # A missing/free-trial AI key must not make the local product unusable.
+        # Keyword and exact-error retrieval remain fully authorized and operational.
+        results, total, latency_ms = execute_keyword_search(db, user=current_user, payload=payload)
+        confidence = results[0].score if results else None
+        no_answer = not results
+        ranked_solution_ids = [item.solution_id for item in results]
+        semantic_status = "not_available"
 
     summary = None
     citations: list[str] = []
     generation_used = False
     generation_status = "not_requested"
     generation_error = None
-    if payload.include_summary and not no_answer:
+    if payload.include_summary and not no_answer and semantic_status == "available":
         try:
             sources = build_grounding_sources(
                 db,
                 solution_ids=ranked_solution_ids[: settings.rag_max_context_solutions],
             )
-            answer = BedrockGroundedGenerationAdapter(settings).generate(query=payload.query, sources=sources)
+            answer = _generation_adapter(settings).generate(query=payload.query, sources=sources)
             summary = answer.summary or None
             citations = [str(citation) for citation in answer.citations]
             generation_used = bool(summary)
@@ -69,7 +102,9 @@ def search_solutions(
             generation_status = "invalid_response"
             generation_error = "Grounded summary could not be safely returned."
     elif payload.include_summary:
-        generation_status = "not_run_no_answer"
+        generation_status = "not_run_no_answer" if no_answer else "unavailable"
+        if semantic_status != "available" and not no_answer:
+            generation_error = "Configure an AI provider to generate a grounded summary."
 
     outcome = "grounded_summary_generated" if generation_used else ("no_answer" if no_answer else "hybrid_results")
     log = create_search_log(
@@ -113,7 +148,7 @@ def search_solutions(
             "no_answer": no_answer,
             "service_status": {
                 "keyword_search": "available",
-                "semantic_search": "available",
+                "semantic_search": semantic_status,
                 "grounded_summary": generation_status,
             },
         },

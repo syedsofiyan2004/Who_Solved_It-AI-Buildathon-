@@ -3,7 +3,6 @@ from pydantic import ValidationError
 
 from app.core.config import Settings
 
-
 BASE_VALUES = {
     "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
     "JWT_SECRET": "<test-only-jwt-secret>",
@@ -64,3 +63,20 @@ def test_one_search_threshold_is_configured_for_eligibility_and_no_answer():
     settings = Settings(**BASE_VALUES, SEARCH_RESULT_THRESHOLD=0.52)
 
     assert settings.search_result_threshold == 0.52
+
+
+def test_nvidia_provider_requires_key_only_when_rag_is_enabled():
+    keyword_only = Settings(**BASE_VALUES, AI_PROVIDER="nvidia", RAG_ENABLED=False)
+    assert keyword_only.rag_enabled is False
+
+    with pytest.raises(ValidationError):
+        Settings(**BASE_VALUES, AI_PROVIDER="nvidia", NVIDIA_API_KEY="", RAG_ENABLED=True)
+
+    configured = Settings(
+        **BASE_VALUES,
+        AI_PROVIDER="nvidia",
+        NVIDIA_API_KEY="fictional-test-key",
+        RAG_ENABLED=True,
+    )
+    assert configured.embedding_status == "configured"
+    assert configured.chat_model_id == "moonshotai/kimi-k2.6"

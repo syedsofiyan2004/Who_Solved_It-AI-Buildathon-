@@ -12,14 +12,14 @@ All notable project changes are documented here. The format is intentionally lig
 - Clarified the search interface's applied query and rendered the returned explanations rather than a generic match label.
 - Corrected the remaining psycopg untyped-array shape, which can arrive as a list of individual PostgreSQL literal characters, so live result tags render as complete technology names.
 - Completed the approved Priority 0-1 correction slice: safe source packaging, expanded path-only secret detection and tests, `main` branch alignment, one retrieval/no-answer threshold, minimum semantic-reason confidence, globally ranked grounding context, and expanded backend/frontend regressions.
-- Restored local Bedrock search by forwarding ignored local AWS credentials to the API service only; the frontend never receives AWS credentials. A live authenticated `Terraform` search now returns verified results.
+- Restored local semantic search configuration while keeping provider credentials server-side only. A live authenticated `Terraform` search now returns verified results.
 - Closed the remaining reviewed Priority 0–1 validation gaps: CI-safe test settings, endpoint-level search metadata coverage, CI-equivalent migration/seed validation under `APP_ENV=test`, and a retained verified source archive with no local environment file or credential-like content.
 
 ### Added - Phase 8 grounded RAG answers
 
-- Strict Bedrock grounded-generation adapter with a JSON-only prompt, permitted technical context reconstruction, source UUID citation validation, secret/contact output checks, and no synthetic fallback.
+- Strict grounded-generation adapter with a JSON-only prompt, permitted technical context reconstruction, source UUID citation validation, secret/contact output checks, and no synthetic fallback.
 - Optional `POST /search` summaries that run only for confidence-passing authorized results, with source-preserving unavailable/invalid-response states and safe generation audit metadata.
-- Controlled adapter regression coverage plus a successful live Bedrock grounded-summary validation using fictional records only.
+- Controlled adapter regression coverage plus successful grounded-summary validation using fictional records only.
 
 ### Fixed - Phase 8 validation
 
@@ -27,7 +27,7 @@ All notable project changes are documented here. The format is intentionally lig
 
 ### Added - Phase 7 hybrid retrieval
 
-- Authenticated hybrid solution search using real Bedrock query embeddings, bounded pgvector cosine candidates, PostgreSQL FTS/exact-error candidates, object-level visibility filtering, deterministic merge/rerank, confidence logging, and no-answer gating.
+- Authenticated hybrid solution search using configured query embeddings, bounded pgvector cosine candidates, PostgreSQL FTS/exact-error candidates, object-level visibility filtering, deterministic merge/rerank, confidence logging, and no-answer gating.
 - A verified keyword/exact-result fallback for records awaiting re-embedding, without fabricating a semantic score.
 - Versioned fictional retrieval evaluation fixture covering the 36 seeded solutions through expected top-five groups plus no-answer and permission cases.
 
@@ -36,17 +36,17 @@ All notable project changes are documented here. The format is intentionally lig
 - Set the Docker Compose development default for `SEARCH_SIMILARITY_THRESHOLD` to `0.35` rather than passing a blank value into the API container.
 - Deferred a dimension-specific HNSW index after PostgreSQL correctly rejected indexing the deliberately dimension-flexible pgvector column; the bounded scan is appropriate for the fictional corpus and preserves the approved model-change boundary.
 
-### Added - Phase 6 Bedrock embeddings
+### Added - Phase 6 semantic embeddings
 
 - Idempotent, fictional-only development corpus with 24 `example.test` employees, 12 technologies, and 36 technical solution records.
 - pgvector `solution_embeddings` storage, canonical permitted technical embedding documents, secret detection, content hashes, and verified-only re-embedding command.
-- Strict Amazon Bedrock embedding adapter contracts for Amazon Titan and Cohere models, with configuration, dimension, malformed-response, and dependency failure handling that never fabricates a vector.
+- Strict embedding adapter contracts with configuration, dimension, malformed-response, and dependency failure handling that never fabricates a vector.
 - Adapter and pgvector persistence tests using controlled in-process responses rather than AWS calls.
 
 ### Fixed - Phase 6 live validation
 
 - Treat a blank `AWS_PROFILE` supplied by Docker Compose as absent so boto3 uses the approved credential chain.
-- Made embedding configuration tests independent from locally configured Bedrock environment values.
+- Made embedding configuration tests independent from locally configured provider environment values.
 
 ### Added - Phase 5 keyword search
 
@@ -104,7 +104,7 @@ All notable project changes are documented here. The format is intentionally lig
 ### Added - Phase 1 foundation
 
 - FastAPI application skeleton with public liveness and readiness health endpoints.
-- Pydantic settings validation for environment, JWT, upload, CORS, search and Bedrock/RAG configuration.
+- Pydantic settings validation for environment, JWT, upload, CORS, search and RAG configuration.
 - SQLAlchemy database session setup.
 - Alembic migration environment and first foundation migration for PostgreSQL extensions, enums, core relational tables, audit fields, FTS column, and indexes.
 - Development seed skeleton that runs without inserting unapproved sample data.
@@ -133,4 +133,17 @@ All notable project changes are documented here. The format is intentionally lig
 
 ### Not added
 
-- No authentication implementation, knowledge repository workflows, retrieval, Bedrock integration, RAG summaries, reviewer workflows, Nginx configuration, or EC2 deployment scripts were started in Phase 1.
+- No authentication implementation, knowledge repository workflows, retrieval, AI integration, RAG summaries, reviewer workflows, Nginx configuration, or deployment scripts were started in Phase 1.
+
+## Final local product build - 2026-07-26
+
+- Rebranded the showcase product as **Minfy Resolve** and retained a local-only Docker architecture with no AWS deployment requirement.
+- Added NVIDIA-hosted AI adapters for semantic embeddings and grounded summaries while preserving keyword/exact-error search when AI is unavailable.
+- Configured `nvidia/nemotron-3-embed-1b` for query/passage embeddings and `moonshotai/kimi-k2.6` for grounded summaries.
+- Replaced the small fictional seed with an idempotent original synthetic corpus containing 43 supplied employee profiles, 49 technologies, 53 incident blueprints, seven environments, and 371 solution records.
+- Added Cloud/DevOps, SREaaS, Intelligent Data Applications, AI/Data Science, leadership, management, and People Operations profiles with temporary showcase email conventions.
+- Redesigned the authenticated UI into a premium connected product shell with responsive navigation, semantic light/dark themes, a product home, expert directory, and technical reading views.
+- Converted search into a URL-preserved master-detail workspace so opening a solution or solver does not discard query, filters, page, cached results, or scroll context.
+- Added rich solution/solver panels, upgraded result cards, improved authoring and review workspaces, and fixed light-theme contrast defects caused by dark-only text assumptions.
+- Made authoring submission use the persisted draft ID, permitted incomplete draft updates, protected autosave against stale responses, and corrected active verification metadata after material edits.
+- Added final local setup, data-provenance, AI configuration, and safe source-package documentation.

@@ -2,7 +2,7 @@
 
 ## 1. Test strategy
 
-Run fast unit/component tests on change, API/database integration tests against ephemeral PostgreSQL+pgvector in CI, contract tests at service boundaries, and end-to-end/responsive/accessibility suites before phase completion. Bedrock calls are never required for normal unit tests: adapter contract tests use recorded valid/invalid responses; a separately gated integration suite uses approved AWS credentials and explicitly records dependency-unavailable outcomes.
+Run fast unit/component tests on change, API/database integration tests against ephemeral PostgreSQL+pgvector in CI, contract tests at service boundaries, and end-to-end/responsive/accessibility suites before phase completion. AI-provider calls are never required for normal unit tests: adapter contract tests use recorded valid/invalid responses; a separately gated integration suite uses approved provider credentials and explicitly records dependency-unavailable outcomes.
 
 ## 2. Coverage matrix
 
@@ -12,9 +12,9 @@ Run fast unit/component tests on change, API/database integration tests against 
 | Frontend component | Isolated accessible UI | login form, filter chips, result card/drawer, all submission steps, skeleton/empty/error/disabled states, mobile nav |
 | API integration | FastAPI + PostgreSQL migrations | login, protected endpoint, challenge lifecycle, review, feedback idempotency, pagination/error envelope |
 | Database | Constraints, indexes, migrations | uniqueness, visibility checks, cascade/restrict behavior, FTS/exact-error/vector query plan and migration upgrade |
-| Authorization | Role/object matrix | forbidden detail/download/contact/review/admin access; Bedrock context excludes denied record |
+| Authorization | Role/object matrix | forbidden detail/download/contact/review/admin access; AI-provider context excludes denied record |
 | Retrieval | Keyword/exact/vector/merge/rerank | expected top-five, confidence gate, protected record exclusion, deterministic tie break |
-| Bedrock adapter | Request/response/failures | model config, dimensions, timeout, throttling, malformed/citation-invalid output, no fake fallback |
+| AI-provider adapter | Request/response/failures | model config, dimensions, timeout, throttling, malformed/citation-invalid output, no fake fallback |
 | RAG evaluation | Fixed labeled corpus | Recall@5, solver accuracy, permission/no-answer/citation accuracy |
 | E2E | Browser workflow | login → submit → review → search → details/contact → feedback; error/retry path |
 | Responsive/accessibility | Desktop/mobile and assistive tech | 320px mobile navigation, keyboard command palette, focus trap, contrast, screen-reader status/live updates |
@@ -36,11 +36,11 @@ Evaluation row schema: `query`, `expected_solution_id`, `expected_solver_id`, `e
 | 3 | CRUD lifecycle, review/visibility, upload validation, profile/feedback tests and UI states. |
 | 4 | Component snapshots where useful, keyboard/a11y assertions, desktop/mobile visual checks. |
 | 5 | FTS/error/filter/sort/pagination integration and evaluation baseline. |
-| 6 | Hash/dimension/re-embed and Bedrock failure adapter tests. |
+| 6 | Hash/dimension/re-embed and AI-provider failure adapter tests. |
 | 7 | Hybrid ranking and permission-filter evaluation gates. |
-| 8 | Grounding/citation/no-answer/Bedrock-unavailable integration and evaluation gates. |
+| 8 | Grounding/citation/no-answer/AI-provider-unavailable integration and evaluation gates. |
 | 9 | E2E interaction, responsive, accessibility, no-console-warning checks. |
-| 10 | Full regression/security suite, production image/config smoke test, EC2 runbook/restore validation. |
+| 10 | Full regression/security suite, production image/config smoke test, local Docker end-to-end validation. |
 
 ## 5. Test execution policy
 
@@ -49,7 +49,7 @@ Exact commands are introduced with Phase 1 tooling and recorded in `IMPLEMENTATI
 ## 6. Phase 9 Priority 0-1 regression additions
 
 - Repository secret scanner: fail only with affected paths when an AKIA/ASIA key, private key, GitHub token, non-placeholder AWS/token/API-key/JWT-secret assignment, or password-bearing database URL occurs outside ignored local `.env`; exercise it from the repository root and in CI. Package-export tests verify that local env, dependencies, builds, uploads, virtual environments, caches, and generated artifacts are absent.
-- Configuration: reject an eligibility floor below the no-answer threshold and report missing Bedrock configuration by variable name only.
+- Configuration: reject an eligibility floor below the no-answer threshold and report missing AI-provider configuration by variable name only.
 - Search serialization: assert PostgreSQL aggregate strings and native arrays both become complete `list[str]` technology values.
 - Search ranking: assert one/multiple technology serialization, ineligible-result exclusion, accurate totals, pagination after filtering, deduplication, one-threshold no-answer behavior, and stable explanations; integration coverage confirms summary context uses the global ranked source cap.
 - Search UI: assert complete technology chips, URL-refresh restoration, browser back/forward restoration, immediate loading, no-answer, error/retry, and draft-versus-applied-query behavior.

@@ -84,10 +84,19 @@ def require_view_challenge(db: Session, viewer: User, challenge: Challenge) -> N
         raise not_found()
 
 
-def require_edit_challenge(user: User, challenge: Challenge) -> None:
+def can_edit_challenge(user: User, challenge: Challenge) -> bool:
     if user.role == AppRole.ADMINISTRATOR:
-        return
-    if user.id != challenge.owner_user_id or challenge.status not in {ContentStatus.DRAFT, ContentStatus.CHANGES_REQUESTED}:
+        return True
+    return user.id == challenge.owner_user_id and challenge.status in {
+        ContentStatus.DRAFT,
+        ContentStatus.CHANGES_REQUESTED,
+        ContentStatus.SUBMITTED,
+        ContentStatus.VERIFIED,
+    }
+
+
+def require_edit_challenge(user: User, challenge: Challenge) -> None:
+    if not can_edit_challenge(user, challenge):
         raise forbidden_error()
 
 

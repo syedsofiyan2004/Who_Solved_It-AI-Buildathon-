@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-
 FIXTURE = Path(__file__).parent / "fixtures" / "rag_evaluation.jsonl"
 REQUIRED_KEYS = {
     "query",

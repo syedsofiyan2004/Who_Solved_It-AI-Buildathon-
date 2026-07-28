@@ -2,10 +2,23 @@ from datetime import date, datetime
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
-from sqlalchemy.types import UserDefinedType
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID as PG_UUID
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import UserDefinedType
 
 from app.models.base import Base
 
@@ -41,6 +54,12 @@ class AttachmentStatus(str, Enum):
     DELETED = "deleted"
 
 
+class FeedbackValue(str, Enum):
+    HELPFUL = "helpful"
+    NOT_HELPFUL = "not_helpful"
+    RESOLVED_MY_ISSUE = "resolved_my_issue"
+
+
 CONTENT_STATUS_ENUM = SAEnum(
     ContentStatus, name="content_status", values_callable=lambda statuses: [item.value for item in statuses], create_type=False
 )
@@ -52,6 +71,9 @@ REVIEW_DECISION_ENUM = SAEnum(
 )
 ATTACHMENT_STATUS_ENUM = SAEnum(
     AttachmentStatus, name="attachment_status", values_callable=lambda statuses: [item.value for item in statuses], create_type=False
+)
+FEEDBACK_VALUE_ENUM = SAEnum(
+    FeedbackValue, name="feedback_value", values_callable=lambda values: [item.value for item in values], create_type=False
 )
 
 
@@ -93,6 +115,7 @@ class EmployeeProfile(Base):
     team_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("teams.id"))
     contact_email: Mapped[str] = mapped_column(nullable=False)
     contact_handle: Mapped[str | None] = mapped_column(String(160))
+    skills: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="'[]'::jsonb")
     bio: Mapped[str | None] = mapped_column(Text)
     avatar_key: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -211,5 +234,18 @@ class SolutionEmbedding(Base):
     embedding: Mapped[list[float]] = mapped_column(PgVector(), nullable=False)
     embedding_model: Mapped[str] = mapped_column(String(255), nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    solution_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("solutions.id"), nullable=False)
+    submitted_by_user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    search_query_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("search_queries.id"))
+    value: Mapped[FeedbackValue] = mapped_column(FEEDBACK_VALUE_ENUM, nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

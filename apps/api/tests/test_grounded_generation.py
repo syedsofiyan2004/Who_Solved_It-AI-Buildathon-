@@ -1,6 +1,7 @@
 import json
 from uuid import uuid4
 
+import httpx
 import pytest
 
 from app.core.config import Settings
@@ -8,8 +9,8 @@ from app.services.grounded_generation import (
     BedrockGroundedGenerationAdapter,
     GroundedGenerationInvalid,
     GroundingSource,
+    NvidiaGroundedGenerationAdapter,
 )
-
 
 SETTINGS_VALUES = {
     "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
@@ -66,3 +67,33 @@ def test_grounded_generation_rejects_unsafe_or_ungrounded_output(payload):
 
     with pytest.raises(GroundedGenerationInvalid):
         adapter.generate(query="safe query", sources=[GroundingSource(solution_id=source_id, technical_document="Title: Safe")])
+
+
+def test_nvidia_generation_adapter_returns_only_valid_grounded_json():
+    solution_id = uuid4()
+    response_payload = {
+        "summary": f"Use the verified package path. [{solution_id}]",
+        "citations": [str(solution_id)],
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        request_payload = json.loads(request.content.decode())
+        assert request_payload["model"] == "moonshotai/kimi-k2.6"
+        assert request_payload["stream"] is False
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(response_payload)}}]})
+
+    settings = Settings(
+        DATABASE_URL="postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
+        JWT_SECRET="<test-only-jwt-secret>",
+        AI_PROVIDER="nvidia",
+        NVIDIA_API_KEY="fictional-test-key",
+        RAG_ENABLED=True,
+    )
+    adapter = NvidiaGroundedGenerationAdapter(settings, client=httpx.Client(transport=httpx.MockTransport(handler)))
+    answer = adapter.generate(
+        query="Container package error",
+        sources=[GroundingSource(solution_id=solution_id, technical_document="Title: Package path")],
+    )
+
+    assert answer.summary.startswith("Use the verified package path")
+    assert answer.citations == [solution_id]

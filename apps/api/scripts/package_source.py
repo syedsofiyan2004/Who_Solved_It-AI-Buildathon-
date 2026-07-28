@@ -4,13 +4,12 @@ import argparse
 import zipfile
 from pathlib import Path
 
-
 EXCLUDED_DIRECTORIES = {
     ".git", ".venv", ".cache", "__pycache__", "coverage", "dist", "htmlcov", "node_modules",
     ".pytest_cache", ".ruff_cache", "uploads", "artifacts",
 }
-EXCLUDED_FILENAMES = {".env"}
-EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
+EXCLUDED_FILENAMES = {".env", "vite.config.js", "vite.config.d.ts", "tailwind.config.js", "tailwind.config.d.ts"}
+EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".tsbuildinfo"}
 
 
 def exportable_paths(root: Path, output: Path) -> list[Path]:
