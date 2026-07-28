@@ -188,7 +188,7 @@ Those fields always come from PostgreSQL.
 | API | FastAPI, Pydantic | Auth, repository lifecycle, search, review, profile APIs |
 | Data access | SQLAlchemy, Alembic | Models, migrations, transactional access |
 | Database | PostgreSQL with pgvector | Structured records, full-text search, vector search |
-| AI adapters | Amazon Bedrock design with configurable provider adapters | Embeddings and grounded summaries |
+| AI adapters | NVIDIA-hosted embedding and chat adapters | Embeddings and grounded summaries |
 | Local runtime | Docker Compose | PostgreSQL, API, and web services |
 
 The frontend is intentionally not the main design focus. The platform value is in structured knowledge capture, verification, authorization-aware retrieval, expert discovery, and grounded summarization.
@@ -211,7 +211,7 @@ The MVP includes:
 - no AWS credentials in source code;
 - safe source packaging.
 
-## Current local MVP status
+## Current review build status
 
 Implemented locally:
 

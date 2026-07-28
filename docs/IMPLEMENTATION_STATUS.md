@@ -2,7 +2,7 @@
 
 ## Current status
 
-**Final local MVP implemented.** The product is intentionally local-only for the zero-infrastructure-cost buildathon demonstration. AWS deployment is not part of the final scope.
+**Final review build implemented.** The product is intentionally local-only for the zero-infrastructure-cost buildathon demonstration. Hosted deployment is not part of the final scope.
 
 ## Working product areas
 
@@ -11,7 +11,7 @@
 | Authentication and roles | Implemented | Employee, reviewer, and administrator workflows |
 | Knowledge repository | Implemented | Draft, edit, submit, review, verify, archive lifecycle |
 | Keyword and exact-error search | Implemented | PostgreSQL FTS, deterministic exact-error matching, filtering, pagination |
-| Semantic retrieval | Implemented | pgvector plus configurable NVIDIA or Bedrock embedding adapter |
+| Semantic retrieval | Implemented | pgvector plus configurable NVIDIA embedding adapter |
 | Grounded summaries | Implemented | Provider-generated answer constrained to authorized retrieved records and source IDs |
 | Expert discovery | Implemented | Search-result solver cards, connected profile panel, full employee directory/profile |
 | Authoring | Implemented | Multi-step workflow, real draft persistence, race-safe autosave, restore and edit |
@@ -22,7 +22,7 @@
 | Responsive UI | Implemented | Desktop master-detail workspace and mobile detail sheets |
 | Showcase corpus | Implemented | 43 supplied employee profiles and 511 generated original synthetic technical records |
 | Local Docker setup | Implemented | React, FastAPI, PostgreSQL, pgvector |
-| AWS deployment | Excluded | Not required for the zero-cost buildathon scope |
+| Hosted deployment | Excluded | Not required for the zero-cost buildathon scope |
 
 ## Final local workflow
 
@@ -43,14 +43,13 @@
 |---|---|
 | AI disabled | Keyword and exact-error search remains available |
 | NVIDIA | Semantic embeddings and grounded Kimi summaries |
-| Bedrock | Backward-compatible adapter retained, but not needed for final demo |
 
 ## Known showcase boundaries
 
 - Attachments remain private and scan-pending because no external malware scanner is included.
 - Demonstration emails follow the temporary `first.last@minfytech.com` convention.
 - The technical corpus is original synthetic data and should not be represented as production runbooks.
-- Company SSO, connected messaging systems, and production deployment are outside this local MVP.
+- Company SSO, connected messaging systems, and production deployment are outside this review build.
 
 ## Validation note
 

@@ -1,6 +1,6 @@
 # Approved Static UI Copy
 
-All static visible UI strings must use these IDs. Dynamic values, API error details, and Bedrock-generated search summaries are exceptions only where `UI_SPEC.md` permits them. Do not add marketing copy or placeholder prose without updating this file and obtaining normal review.
+All static visible UI strings must use these IDs. Dynamic values, API error details, and AI-generated search summaries are exceptions only where `UI_SPEC.md` permits them. Do not add marketing copy or placeholder prose without updating this file and obtaining normal review.
 
 ## Navigation and global actions
 

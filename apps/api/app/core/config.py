@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     jwt_audience: str = Field(default="knowledge-platform-web", alias="JWT_AUDIENCE")
 
     # AI provider selection. `nvidia` is the zero-infrastructure local/demo path;
-    # Bedrock remains supported for teams that already have approved AWS access.
+    # Legacy provider fields remain supported for older local environment files.
     ai_provider: str = Field(default="disabled", alias="AI_PROVIDER")
 
     aws_region: str = Field(default="", alias="AWS_REGION")
@@ -106,7 +106,7 @@ class Settings(BaseSettings):
         if self.rag_enabled and self.effective_ai_provider == "disabled":
             raise ValueError("RAG_ENABLED requires AI_PROVIDER=nvidia or AI_PROVIDER=bedrock.")
 
-        # Backward-compatible validation for existing Bedrock-only environments.
+        # Backward-compatible validation for existing provider-specific environments.
         if self.bedrock_embeddings_enabled:
             missing = [
                 name
@@ -123,7 +123,7 @@ class Settings(BaseSettings):
 
     @property
     def effective_ai_provider(self) -> str:
-        """Resolve older Bedrock-only environments without changing their files."""
+        """Resolve older provider-specific environments without changing their files."""
         if self.ai_provider != "disabled":
             return self.ai_provider
         if self.bedrock_embeddings_enabled or self.bedrock_embedding_model_id or self.bedrock_chat_model_id:

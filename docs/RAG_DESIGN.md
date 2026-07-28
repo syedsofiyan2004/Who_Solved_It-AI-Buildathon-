@@ -89,4 +89,4 @@ Every claim requires an inline source UUID. The backend rejects malformed JSON, 
 - Embeddings configured: hybrid retrieval is active.
 - Chat configured and requested: grounded summary is added after retrieval.
 
-A separate reranker is optional and not required for the final local MVP.
+A separate reranker is optional and not required for the final review build.

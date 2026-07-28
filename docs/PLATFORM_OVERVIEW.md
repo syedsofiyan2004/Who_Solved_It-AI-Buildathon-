@@ -22,7 +22,7 @@ Minfy Resolve addresses this by combining a structured solution repository, hybr
 
 ## What it is made of
 
-The local MVP is built as a monorepo with these main parts:
+The review build is built as a monorepo with these main parts:
 
 | Layer | Main technology | Purpose |
 |---|---|---|
@@ -30,7 +30,7 @@ The local MVP is built as a monorepo with these main parts:
 | API | FastAPI, Pydantic | Authentication, repository workflows, search, review, profile APIs |
 | Data access | SQLAlchemy, Alembic | Database models, migrations, transactional access |
 | Database | PostgreSQL with pgvector | Structured records, full-text search, vector search |
-| AI adapters | Bedrock-compatible design; configurable local/provider adapters | Embeddings and grounded summaries |
+| AI adapters | NVIDIA-hosted embedding and chat adapters | Embeddings and grounded summaries |
 | Local runtime | Docker Compose | Runs PostgreSQL, API, and web locally |
 
 The frontend is intentionally not the center of the design. It is the product surface for the core workflows, while the important platform value sits in the repository model, authorization rules, retrieval pipeline, review workflow, and grounded answer generation.
@@ -198,9 +198,9 @@ The MVP includes these controls:
 - no personal contact data in embeddings;
 - no source-controlled AWS credentials.
 
-## Current local MVP status
+## Current review build status
 
-The local MVP is implemented and runnable with Docker Compose. It includes:
+The current review build is implemented and runnable with Docker Compose. It includes:
 
 - authentication;
 - searchable verified solution records;
@@ -226,7 +226,7 @@ The local database may contain a higher total count if older local records were 
 
 ## Known limits
 
-The current version is a local MVP. These items are not fully productionized:
+The current version is a local review build. These items are not fully productionized:
 
 - company SSO is not included;
 - malware scanning for uploaded files is represented but not connected to an external scanner;
@@ -240,7 +240,7 @@ The most valuable next improvements are:
 
 1. Connect real company identity data or SSO.
 2. Import approved real solution/runbook data.
-3. Configure the approved production Bedrock embedding and generation models.
+3. Configure the approved production embedding and generation provider.
 4. Add an ingestion workflow for existing documents or tickets.
 5. Add reviewer assignment rules.
 6. Add stronger analytics for no-answer searches and repeated blockers.

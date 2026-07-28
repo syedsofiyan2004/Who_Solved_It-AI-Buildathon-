@@ -3,7 +3,7 @@
 ## Local showcase controls
 
 - `.env` is ignored and never included in shareable archives.
-- The browser never receives `NVIDIA_API_KEY`, AWS credentials, JWT secrets, or database credentials.
+- The browser never receives `NVIDIA_API_KEY`, AI provider keys, JWT secrets, or database credentials.
 - The API uses the normal provider credential chain and sends only approved technical context.
 - Passwords are hashed; JWTs are short-lived and validated for issuer, audience, expiry, subject, and token ID.
 - Role-based and object-level authorization applies to challenge detail, edits, reviews, profiles, search candidates, contact fields, attachments, feedback, and RAG context.
@@ -27,8 +27,6 @@ NVIDIA_API_KEY=your-new-local-key
 ```
 
 The value belongs only in the ignored local `.env`. It must not appear in source files, Compose defaults, screenshots, logs, exported archives, or chat messages.
-
-Bedrock compatibility uses an AWS CLI profile or runtime role. Static AWS credentials are not required for the final local build.
 
 ## Source-package safety
 

@@ -42,4 +42,4 @@ The following are intentionally outside the zero-cost local showcase:
 - Attachment malware-scanning service
 - Production email delivery
 
-These exclusions do not prevent the complete local MVP workflow.
+These exclusions do not prevent the complete local review workflow.

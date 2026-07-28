@@ -295,7 +295,7 @@ def execute_hybrid_search(
     adapter: EmbeddingAdapter,
     threshold: float,
 ) -> tuple[list[SearchResult], int, int, float | None, bool, list[UUID]]:
-    """Merge authorized Bedrock vector, FTS, and exact-error candidates.
+    """Merge authorized vector, FTS, and exact-error candidates.
 
     A keyword candidate remains eligible when a verified record is awaiting its
     embedding. That preserves the approved keyword fallback while embedding

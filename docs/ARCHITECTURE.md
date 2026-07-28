@@ -10,7 +10,6 @@ flowchart LR
   web --> api[FastAPI monolith]
   api --> postgres[(PostgreSQL + pgvector)]
   api --> nvidia[NVIDIA embedding/chat endpoint]
-  api -. optional compatibility .-> bedrock[Amazon Bedrock]
 ```
 
 ## Runtime services
@@ -61,10 +60,6 @@ FastAPI remains a single modular service using:
 - Embedding: `nvidia/nemotron-3-embed-1b`
 - Grounded chat: `moonshotai/kimi-k2.6`
 - Credential: ignored local `NVIDIA_API_KEY`
-
-### Bedrock compatibility
-
-The existing Bedrock adapter remains available for a future approved environment. It is not needed for the local buildathon application.
 
 ## Data boundaries
 
