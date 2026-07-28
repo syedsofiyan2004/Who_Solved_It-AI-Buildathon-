@@ -134,3 +134,16 @@ All notable project changes are documented here. The format is intentionally lig
 ### Not added
 
 - No authentication implementation, knowledge repository workflows, retrieval, Bedrock integration, RAG summaries, reviewer workflows, Nginx configuration, or EC2 deployment scripts were started in Phase 1.
+
+## Final local product build - 2026-07-26
+
+- Rebranded the showcase product as **Minfy Resolve** and retained a local-only Docker architecture with no AWS deployment requirement.
+- Added NVIDIA-hosted AI adapters for semantic embeddings and grounded summaries while preserving keyword/exact-error search when AI is unavailable.
+- Configured `nvidia/nemotron-3-embed-1b` for query/passage embeddings and `moonshotai/kimi-k2.6` for grounded summaries.
+- Replaced the small fictional seed with an idempotent original synthetic corpus containing 43 supplied employee profiles, 49 technologies, 53 incident blueprints, seven environments, and 371 solution records.
+- Added Cloud/DevOps, SREaaS, Intelligent Data Applications, AI/Data Science, leadership, management, and People Operations profiles with temporary showcase email conventions.
+- Redesigned the authenticated UI into a premium connected product shell with responsive navigation, semantic light/dark themes, a product home, expert directory, and technical reading views.
+- Converted search into a URL-preserved master-detail workspace so opening a solution or solver does not discard query, filters, page, cached results, or scroll context.
+- Added rich solution/solver panels, upgraded result cards, improved authoring and review workspaces, and fixed light-theme contrast defects caused by dark-only text assumptions.
+- Made authoring submission use the persisted draft ID, permitted incomplete draft updates, protected autosave against stale responses, and corrected active verification metadata after material edits.
+- Added final local setup, data-provenance, AI configuration, and safe source-package documentation.

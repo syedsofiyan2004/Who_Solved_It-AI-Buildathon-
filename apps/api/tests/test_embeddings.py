@@ -8,9 +8,24 @@ from app.core.config import Settings
 from app.core.security import hash_password
 from app.database.session import SessionLocal
 from app.models.auth import AppRole, User
-from app.models.repository import Challenge, ContentStatus, Department, EmployeeProfile, Solution, SolutionEmbedding, Team, Technology, ChallengeTechnology, VisibilityLevel
-from app.services.embeddings import BedrockEmbeddingAdapter, EmbeddingContentRejected, EmbeddingUnavailable, embed_verified_solution
-
+from app.models.repository import (
+    Challenge,
+    ChallengeTechnology,
+    ContentStatus,
+    Department,
+    EmployeeProfile,
+    Solution,
+    SolutionEmbedding,
+    Team,
+    Technology,
+    VisibilityLevel,
+)
+from app.services.embeddings import (
+    BedrockEmbeddingAdapter,
+    EmbeddingContentRejected,
+    EmbeddingUnavailable,
+    embed_verified_solution,
+)
 
 BASE_VALUES = {
     "DATABASE_URL": "postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
@@ -79,3 +94,4 @@ def test_verified_solution_embedding_is_hashed_deduplicated_and_stored_in_pgvect
         db.execute(delete(Team).where(Team.id == team_id))
         db.execute(delete(Department).where(Department.id == department_id))
         db.commit()
+

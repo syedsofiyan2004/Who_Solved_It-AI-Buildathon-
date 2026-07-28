@@ -1,73 +1,73 @@
 # Architecture
 
-## 1. Locked topology
+## Local-only product architecture
 
-One monorepo contains one React web client and one FastAPI backend. PostgreSQL with pgvector runs in Docker for local development and the first EC2 deployment. The backend alone calls Amazon Bedrock using an AWS profile locally or an EC2 instance role when deployed. Nginx reverse-proxies the web/API deployment on the single EC2 host.
+One monorepo contains one React web client and one FastAPI backend. PostgreSQL with pgvector runs in Docker Compose. The backend alone calls the configured AI provider; the browser never receives AI credentials and never talks directly to PostgreSQL.
 
 ```mermaid
-flowchart TB
-  user["Authorized employee browser"] --> nginx["Nginx (EC2 only)"]
-  nginx --> web["React + TypeScript + Vite web app"]
-  nginx --> api["FastAPI monolith"]
-  api --> auth["JWT / RBAC / object authorization"]
-  api --> db[("PostgreSQL + pgvector\nEBS-backed Docker volume")]
-  api --> bedrock["Amazon Bedrock\nembedding + grounded generation"]
-  api --> files["Validated local attachment volume"]
-  db --> audit["Audit logs / search logs"]
+flowchart LR
+  user[Authenticated employee browser] --> web[React + TypeScript]
+  web --> api[FastAPI monolith]
+  api --> postgres[(PostgreSQL + pgvector)]
+  api --> nvidia[NVIDIA embedding/chat endpoint]
+  api -. optional compatibility .-> bedrock[Amazon Bedrock]
 ```
 
-## 2. Repository boundaries
+## Runtime services
 
-| Path | Responsibility | Phase 0 state |
-|---|---|---|
-| `apps/web` | Sole React user interface | Directories only |
-| `apps/api` | Sole FastAPI API/RAG/auth application | Directories only |
-| `infrastructure/docker` | Container build/config assets | Directories only |
-| `infrastructure/nginx` | Reverse-proxy configuration | Directories only |
-| `infrastructure/deployment` | EC2 runbook/scripts | Directories only |
-| `docs` | Approved product and engineering contracts | Phase 0 complete pending approval |
+| Service | Responsibility |
+|---|---|
+| `web` | Product shell, search workspace, authoring, reviews, profiles, responsive UI |
+| `api` | Authentication, authorization, repository lifecycle, search, RAG, feedback, audit |
+| `postgres` | Structured records, FTS documents, pgvector embeddings, audit data |
 
-## 3. Frontend architecture
+No RDS, EC2, ECS, EKS, Kubernetes, ALB, CloudFront, Cognito, or other hosted infrastructure is required for the final buildathon scope.
 
-React, TypeScript, Vite, Tailwind, customized shadcn/ui/Radix, Lucide, Motion for React, React Router, TanStack Query, React Hook Form and Zod are the approved stack. Pages compose feature modules; services are the only API boundary; server state lives in TanStack Query; forms use shared Zod schemas where feasible. Static visible strings originate in `UI_COPY.md` and are compiled into `src/content` in a later phase.
+## Frontend
 
-The client never calls Bedrock or PostgreSQL. It stores JWTs using the security decision made in Phase 2 and reacts to API authorization/error codes without fabricating results.
+The authenticated application uses a persistent `AppShell` with grouped navigation, URL-driven search state, TanStack Query caching, and route-aware solution/solver panels. Search query, filters, pagination, selected solution, and selected solver live in the URL so browser Back/Forward and refresh preserve the product context.
 
-## 4. Backend architecture
+Semantic design tokens support light and dark themes. Desktop search uses a master-detail workspace; mobile uses accessible detail sheets.
 
-The FastAPI monolith uses Pydantic request/response schemas, SQLAlchemy models/repositories, Alembic migrations, service-layer business rules, a `security` boundary for JWT/RBAC/object policy, and a `rag` boundary for Bedrock/retrieval orchestration. Boto3 is isolated behind adapters so test doubles are explicit and production never silently falls back to fake AI.
+## Backend
 
-All SQLAlchemy access is parameterized. FastAPI dependencies authenticate before services access protected resources. API responses follow `API_CONTRACT.md`.
+FastAPI remains a single modular service using:
 
-## 5. Request flows
+- Pydantic request/response schemas
+- SQLAlchemy models and repositories
+- Alembic migrations
+- JWT/RBAC/object authorization
+- Provider-neutral embedding and grounded-generation adapters
+- PostgreSQL full-text and exact-error retrieval
+- pgvector semantic retrieval
+- Append-only review history and structured feedback
 
-### Authenticated search
+## Search flow
 
-1. Browser sends a JWT to `POST /api/v1/search`.
-2. API authenticates, validates query/filters, constructs the caller’s visibility scope.
-3. RAG service obtains query embedding from Bedrock, runs pgvector/FTS/exact-error candidates, filters authorization, merges/reranks/confidence-gates.
-4. API retrieves structured owners and approved contact fields only for authorized hits.
-5. Only permitted solution context reaches the generation model. The response contains citations and structured solver data from PostgreSQL.
+1. Authenticate the user.
+2. Parse query and filters.
+3. Run authorized PostgreSQL FTS and exact-error search.
+4. When embeddings are configured, create a query vector and run pgvector search.
+5. Merge and score available signals.
+6. Apply object authorization and result eligibility.
+7. Serialize solver/contact fields from PostgreSQL.
+8. When requested and eligible, send only authorized technical records to the configured chat model.
+9. Validate citations and return the source records even if generation is unavailable.
 
-### Solution submission/review
+## AI adapters
 
-1. Author submits validated draft or review-ready content.
-2. API authorizes ownership, persists structured challenge/solution data and audit event.
-3. Reviewer applies a decision and visibility scope; verification records are immutable events.
-4. Publish/verification changes enqueue embedding work in a later phase; no vector is generated by a client.
+### NVIDIA local showcase
 
-## 6. Deployment boundaries
+- Embedding: `nvidia/nemotron-3-embed-1b`
+- Grounded chat: `moonshotai/kimi-k2.6`
+- Credential: ignored local `NVIDIA_API_KEY`
 
-Local and deployed runtime: `frontend`, `backend`, `postgres`, and `nginx` (deployment). The PostgreSQL Docker named volume resides on persistent EBS-backed EC2 storage. Security groups limit inbound traffic; IAM grants the backend/EC2 instance only needed Bedrock invocation rights. No RDS, Aurora, ECS, EKS, Kubernetes, ALB, CloudFront, Cognito, NAT Gateway, multi-AZ, or microservices are part of the MVP.
+### Bedrock compatibility
 
-## 7. Configuration and observability
+The existing Bedrock adapter remains available for a future approved environment. It is not needed for the local buildathon application.
 
-`.env.example` lists required configuration without secrets. Startup validation in Phase 1 must fail readably for absent required values appropriate to the enabled service. Logs must redact tokens, passwords, AWS credentials, and content designated sensitive. Audit events and API correlation IDs support traceability.
+## Data boundaries
 
-## 8. Architecture invariants
+PostgreSQL is authoritative for employee names, emails, job titles, teams, departments, ownership, verification, roles, permissions, and contact information. These fields are not embedded and are never generated by the model.
 
-- PostgreSQL is authoritative for structured people, permissions, ownership, and verification.
-- pgvector and Bedrock remain mandatory for semantic/RAG phases.
-- Permission filtering precedes Bedrock context construction.
-- A Bedrock outage produces an explicit unavailable state for dependent features, never fake generated output.
-- Major changes require an approved ADR before implementation.
+Embedding and generation documents contain only permitted technical fields: title, technologies, environment, problem, symptoms, exact error, root cause, resolution, code evidence, and prevention notes.

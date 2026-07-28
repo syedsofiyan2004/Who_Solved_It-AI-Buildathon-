@@ -10,6 +10,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised by direct CLI use.
     from scan_secrets import SECRET_PATTERNS, _contains_assignment_secret
 
 
+FORBIDDEN_FILENAMES = {".env", "vite.config.js", "vite.config.d.ts", "tailwind.config.js", "tailwind.config.d.ts"}
 FORBIDDEN_DIRECTORIES = {
     ".git", ".venv", ".cache", "__pycache__", "coverage", "dist", "htmlcov", "node_modules",
     ".pytest_cache", ".ruff_cache", "uploads", "artifacts",
@@ -24,7 +25,7 @@ def verify_source_archive(path: Path) -> list[str]:
             member_path = Path(member.filename)
             if member.is_dir():
                 continue
-            if member_path.name == ".env" or any(part in FORBIDDEN_DIRECTORIES for part in member_path.parts):
+            if member_path.name in FORBIDDEN_FILENAMES or member_path.suffix == ".tsbuildinfo" or any(part in FORBIDDEN_DIRECTORIES for part in member_path.parts):
                 findings.append(member.filename)
                 continue
             try:

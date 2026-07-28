@@ -1,10 +1,13 @@
 from datetime import UTC, date, datetime
 from uuid import uuid4
 
+import pytest
+
 from app.models.repository import ContentStatus, VisibilityLevel
 from app.schemas.repository import SearchResult
 from app.services.search import (
     _finalize_ranked_results,
+    _hybrid_score,
     _match_reasons,
     _search_outcome,
     _technology_names,
@@ -74,3 +77,62 @@ def test_one_threshold_controls_eligible_results_and_no_answer():
 
     assert _search_outcome(eligible) == (0.45, False)
     assert _search_outcome(ineligible) == (None, True)
+
+
+def test_keyword_only_score_has_no_exact_error_contribution():
+    keyword_only = _hybrid_score(
+        semantic=0,
+        fts=1,
+        exact_error=0,
+        technology=0,
+        verification=1,
+        recency=1,
+        has_semantic=False,
+        has_keyword=True,
+        has_technology_filter=False,
+    )
+
+    assert keyword_only == pytest.approx((0.25 + 0.05 + 0.02) / (0.25 + 0.20 + 0.05 + 0.02))
+
+
+def test_exact_error_contributes_once_separate_from_fts():
+    exact_only = _hybrid_score(
+        semantic=0,
+        fts=0,
+        exact_error=1,
+        technology=0,
+        verification=1,
+        recency=1,
+        has_semantic=False,
+        has_keyword=True,
+        has_technology_filter=False,
+    )
+
+    assert exact_only == pytest.approx((0.20 + 0.05 + 0.02) / (0.25 + 0.20 + 0.05 + 0.02))
+
+
+def test_exact_error_ranks_above_weak_semantic_only_result():
+    exact_only = _hybrid_score(
+        semantic=0,
+        fts=0,
+        exact_error=1,
+        technology=0,
+        verification=1,
+        recency=1,
+        has_semantic=False,
+        has_keyword=True,
+        has_technology_filter=False,
+    )
+    weak_semantic = _hybrid_score(
+        semantic=0.20,
+        fts=0,
+        exact_error=0,
+        technology=0,
+        verification=1,
+        recency=1,
+        has_semantic=True,
+        has_keyword=False,
+        has_technology_filter=False,
+    )
+
+    assert exact_only > weak_semantic

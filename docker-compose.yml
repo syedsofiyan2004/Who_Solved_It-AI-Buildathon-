@@ -20,7 +20,7 @@ services:
       context: ./apps/api
     environment:
       APP_ENV: ${APP_ENV:-development}
-      APP_NAME: ${APP_NAME:-Technical Knowledge and Expert Discovery Platform}
+      APP_NAME: ${APP_NAME:-Minfy Resolve}
       APP_VERSION: ${APP_VERSION:-0.1.0}
       WEB_URL: ${WEB_URL:-http://localhost:5173}
       API_URL: ${API_URL:-http://localhost:8000}
@@ -31,14 +31,17 @@ services:
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
       JWT_ISSUER: ${JWT_ISSUER:-knowledge-platform-api}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-knowledge-platform-web}
+      AI_PROVIDER: ${AI_PROVIDER:-disabled}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_CHAT_URL: ${NVIDIA_CHAT_URL:-https://integrate.api.nvidia.com/v1/chat/completions}
+      NVIDIA_CHAT_MODEL: ${NVIDIA_CHAT_MODEL:-moonshotai/kimi-k2.6}
+      NVIDIA_EMBEDDING_URL: ${NVIDIA_EMBEDDING_URL:-https://integrate.api.nvidia.com/v1/embeddings}
+      NVIDIA_EMBEDDING_MODEL: ${NVIDIA_EMBEDDING_MODEL:-nvidia/nemotron-3-embed-1b}
+      NVIDIA_EMBEDDING_DIMENSIONS: ${NVIDIA_EMBEDDING_DIMENSIONS:-2048}
+      NVIDIA_TIMEOUT_SECONDS: ${NVIDIA_TIMEOUT_SECONDS:-45}
+      NVIDIA_GENERATION_MAX_TOKENS: ${NVIDIA_GENERATION_MAX_TOKENS:-700}
       AWS_REGION: ${AWS_REGION:-}
       AWS_PROFILE: ${AWS_PROFILE:-}
-      # Development-only credential passthrough for the Bedrock client. Values
-      # remain in the ignored local .env and are intentionally not exposed to
-      # the browser service or committed configuration.
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
       BEDROCK_EMBEDDING_MODEL_ID: ${BEDROCK_EMBEDDING_MODEL_ID:-}
       BEDROCK_EMBEDDING_PROVIDER: ${BEDROCK_EMBEDDING_PROVIDER:-auto}
       BEDROCK_EMBEDDING_DIMENSIONS: ${BEDROCK_EMBEDDING_DIMENSIONS:-}
@@ -71,7 +74,7 @@ services:
       sh -c "alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live').read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live').read()"]
       interval: 10s
       timeout: 5s
       retries: 20

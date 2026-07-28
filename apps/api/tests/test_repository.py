@@ -1,14 +1,14 @@
 from datetime import UTC, datetime
-from uuid import uuid4
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
+from app.core.config import Settings, get_settings
 from app.core.security import hash_password
-from app.core.config import get_settings
 from app.database.session import SessionLocal
 from app.main import create_app
 from app.models.auth import AppRole, AuditLog, RevokedToken, User
@@ -16,14 +16,16 @@ from app.models.repository import (
     Attachment,
     Challenge,
     ChallengeTechnology,
+    ContentStatus,
     Department,
     EmployeeProfile,
+    Feedback,
     SearchQuery,
     Solution,
+    SolutionEmbedding,
     Team,
     Technology,
     VerificationReview,
-    ContentStatus,
     VisibilityLevel,
 )
 from app.schemas.repository import SearchResult
@@ -63,9 +65,11 @@ def repository_fixture():
             db.scalars(select(Attachment.storage_key).where(Attachment.uploaded_by_user_id.in_(ids)))
         )
         db.execute(delete(SearchQuery).where(SearchQuery.requested_by_user_id.in_(ids)))
+        db.execute(delete(Feedback).where(Feedback.submitted_by_user_id.in_(ids)))
         db.execute(delete(VerificationReview).where(VerificationReview.reviewer_user_id.in_(ids)))
         db.execute(delete(Attachment).where(Attachment.uploaded_by_user_id.in_(ids)))
         db.execute(delete(ChallengeTechnology).where(ChallengeTechnology.challenge_id.in_(db.query(Challenge.id).filter(Challenge.owner_user_id.in_(ids)))))
+        db.execute(delete(SolutionEmbedding).where(SolutionEmbedding.solution_id.in_(db.query(Solution.id).filter(Solution.primary_owner_user_id.in_(ids)))))
         db.execute(delete(Solution).where(Solution.primary_owner_user_id.in_(ids)))
         db.execute(delete(Challenge).where(Challenge.owner_user_id.in_(ids)))
         db.execute(delete(AuditLog).where(AuditLog.actor_user_id.in_(ids)))
@@ -111,7 +115,11 @@ class _FakeEmbeddingAdapter:
             bedrock_embedding_model_id=settings.bedrock_embedding_model_id,
         )
 
-    def embed(self, document: str) -> list[float]:
+    @property
+    def model_id(self):
+        return self.settings.bedrock_embedding_model_id
+
+    def embed(self, document: str, *, input_type: str = "passage") -> list[float]:
         return [0.0] * 1024
 
 
@@ -251,6 +259,46 @@ def test_owner_and_attachment_authorization(repository_fixture):
     assert archived.json()["data"]["status"] == "archived"
 
 
+def test_incomplete_draft_can_be_saved_but_not_submitted(repository_fixture):
+    client = TestClient(create_app())
+    author_headers = _headers(client, repository_fixture["users"]["author"].email)
+
+    created = client.post(
+        "/api/v1/challenges",
+        headers=author_headers,
+        json={
+            "title": "Draft saved before the full solution is known",
+            "technology_ids": [str(repository_fixture["technology"].id)],
+            "solution": {},
+        },
+    )
+    assert created.status_code == 201
+    draft = created.json()["data"]
+    assert draft["status"] == "draft"
+    assert draft["problem_description"] == ""
+    assert draft["solution"]["root_cause"] == ""
+    assert draft["solution"]["resolution_steps"] == []
+
+    updated = client.patch(
+        f"/api/v1/challenges/{draft['id']}",
+        headers=author_headers,
+        json={
+            "expected_updated_at": draft["updated_at"],
+            "problem_description": "",
+            "symptoms": "",
+            "environment": "Development workspace",
+            "solution": {"root_cause": "Still under investigation."},
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["data"]["environment"] == "Development workspace"
+    assert updated.json()["data"]["problem_description"] == ""
+
+    submitted = client.post(f"/api/v1/challenges/{draft['id']}/submit", headers=author_headers)
+    assert submitted.status_code == 422
+    assert submitted.json()["error"]["code"] == "validation_error"
+
+
 def test_profile_update_and_reviewer_cannot_review_own_submission(repository_fixture):
     client = TestClient(create_app())
     reviewer = repository_fixture["users"]["reviewer"]
@@ -269,6 +317,280 @@ def test_profile_update_and_reviewer_cannot_review_own_submission(repository_fix
     assert own_review.status_code == 403
 
 
+def test_employee_profile_returns_contact_stats_and_authorized_verified_solutions(repository_fixture, monkeypatch):
+    monkeypatch.setattr("app.api.search.BedrockEmbeddingAdapter", _FakeEmbeddingAdapter)
+    client = TestClient(create_app())
+    author = repository_fixture["users"]["author"]
+    author_headers = _headers(client, author.email)
+    reviewer_headers = _headers(client, repository_fixture["users"]["reviewer"].email)
+    outsider_headers = _headers(client, repository_fixture["users"]["outsider"].email)
+
+    profile_update = client.patch(
+        "/api/v1/profiles/me",
+        headers=author_headers,
+        json={
+            "contact_handle": "@author",
+            "skills": ["Docker troubleshooting", "Incident review"],
+        },
+    )
+    assert profile_update.status_code == 200
+
+    visible = client.post("/api/v1/challenges", headers=author_headers, json=_draft_payload(repository_fixture))
+    visible_id = visible.json()["data"]["id"]
+    assert client.post(f"/api/v1/challenges/{visible_id}/submit", headers=author_headers).status_code == 200
+    visible_solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == visible_id).scalar()
+    assert client.post(
+        "/api/v1/reviews",
+        headers=reviewer_headers,
+        json={"solution_id": str(visible_solution_id), "decision": "verified"},
+    ).status_code == 201
+
+    restricted = client.post(
+        "/api/v1/challenges",
+        headers=author_headers,
+        json=_draft_payload(repository_fixture, "restricted"),
+    )
+    restricted_id = restricted.json()["data"]["id"]
+    assert client.post(f"/api/v1/challenges/{restricted_id}/submit", headers=author_headers).status_code == 200
+    restricted_solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == restricted_id).scalar()
+    assert client.post(
+        "/api/v1/reviews",
+        headers=reviewer_headers,
+        json={"solution_id": str(restricted_solution_id), "decision": "verified"},
+    ).status_code == 201
+
+    profile = client.get(f"/api/v1/profiles/{author.id}", headers=outsider_headers)
+    assert profile.status_code == 200
+    body = profile.json()["data"]
+    assert body["user_id"] == str(author.id)
+    assert body["display_name"] == "Author"
+    assert body["job_title"] == "Engineer"
+    assert body["department"] == repository_fixture["department"].name
+    assert body["team"] == repository_fixture["team"].name
+    assert body["contact_email"] == author.email
+    assert body["contact_handle"] == "@author"
+    assert body["skills"] == ["Docker troubleshooting", "Incident review"]
+    assert body["initials"] == "A"
+    assert body["helpful_contribution_count"] == 0
+    assert str(visible_id) in {item["challenge_id"] for item in body["verified_solutions"]}
+    assert str(restricted_id) not in {item["challenge_id"] for item in body["verified_solutions"]}
+    assert repository_fixture["technology"].name in body["technologies"]
+
+    searched = client.post(
+        "/api/v1/search",
+        headers=outsider_headers,
+        json={
+            "query": "ModuleNotFoundError: No module named 'service'",
+            "filters": {
+                "verified_only": True,
+                "technology_ids": [str(repository_fixture["technology"].id)],
+            },
+            "include_summary": False,
+        },
+    )
+    assert searched.status_code == 200
+    solver = next(
+        result["solver"]
+        for result in searched.json()["data"]["results"]
+        if result["challenge_id"] == str(visible_id)
+    )
+    assert solver["team"] == repository_fixture["team"].name
+    assert solver["department"] == repository_fixture["department"].name
+    assert solver["contact_email"] == author.email
+    assert solver["contact_handle"] == "@author"
+    assert solver["initials"] == "A"
+
+
+def test_solution_feedback_can_be_created_and_changed(repository_fixture):
+    client = TestClient(create_app())
+    author_headers = _headers(client, repository_fixture["users"]["author"].email)
+    reviewer_headers = _headers(client, repository_fixture["users"]["reviewer"].email)
+    outsider_headers = _headers(client, repository_fixture["users"]["outsider"].email)
+
+    created = client.post("/api/v1/challenges", headers=author_headers, json=_draft_payload(repository_fixture))
+    challenge_id = created.json()["data"]["id"]
+    assert client.post(f"/api/v1/challenges/{challenge_id}/submit", headers=author_headers).status_code == 200
+    solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == challenge_id).scalar()
+    assert client.post(
+        "/api/v1/reviews",
+        headers=reviewer_headers,
+        json={"solution_id": str(solution_id), "decision": "verified"},
+    ).status_code == 201
+
+    resolved = client.post(
+        "/api/v1/feedback",
+        headers=outsider_headers,
+        json={"solution_id": str(solution_id), "value": "resolved_my_issue", "comment": "This fixed the issue."},
+    )
+    assert resolved.status_code == 201
+    assert resolved.json()["data"]["value"] == "resolved_my_issue"
+
+    detail = client.get(f"/api/v1/challenges/{challenge_id}", headers=outsider_headers)
+    assert detail.status_code == 200
+    assert detail.json()["data"]["feedback"]["resolved_my_issue"] == 1
+    assert detail.json()["data"]["feedback"]["current_user_feedback"]["comment"] == "This fixed the issue."
+
+    changed = client.post(
+        "/api/v1/feedback",
+        headers=outsider_headers,
+        json={"solution_id": str(solution_id), "value": "not_helpful", "comment": "Needs more detail."},
+    )
+    assert changed.status_code == 201
+    assert changed.json()["data"]["id"] == resolved.json()["data"]["id"]
+
+    updated_detail = client.get(f"/api/v1/challenges/{challenge_id}", headers=outsider_headers)
+    assert updated_detail.json()["data"]["feedback"]["resolved_my_issue"] == 0
+    assert updated_detail.json()["data"]["feedback"]["not_helpful"] == 1
+
+
+def test_verified_technical_edit_returns_solution_to_review_and_clears_stale_embedding(repository_fixture):
+    client = TestClient(create_app())
+    author_headers = _headers(client, repository_fixture["users"]["author"].email)
+    reviewer_headers = _headers(client, repository_fixture["users"]["reviewer"].email)
+
+    created = client.post("/api/v1/challenges", headers=author_headers, json=_draft_payload(repository_fixture))
+    challenge_id = created.json()["data"]["id"]
+    assert client.post(f"/api/v1/challenges/{challenge_id}/submit", headers=author_headers).status_code == 200
+    solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == challenge_id).scalar()
+    assert client.post("/api/v1/reviews", headers=reviewer_headers, json={"solution_id": str(solution_id), "decision": "verified"}).status_code == 201
+
+    with SessionLocal() as db:
+        db.add(
+            SolutionEmbedding(
+                solution_id=solution_id,
+                searchable_text="stale verified text",
+                embedding=[0.0] * 1024,
+                embedding_model="test-model",
+                content_hash="stale-hash",
+            )
+        )
+        db.commit()
+
+    detail = client.get(f"/api/v1/challenges/{challenge_id}", headers=author_headers).json()["data"]
+    changed = client.patch(
+        f"/api/v1/challenges/{challenge_id}",
+        headers=author_headers,
+        json={
+            "expected_updated_at": detail["updated_at"],
+            "problem_description": "The verified problem statement was materially corrected.",
+        },
+    )
+
+    assert changed.status_code == 200
+    assert changed.json()["data"]["status"] == "submitted"
+    assert changed.json()["data"]["verified_by_user_id"] is None
+    assert changed.json()["data"]["verified_by_name"] is None
+    assert changed.json()["data"]["last_verified_at"] is None
+    assert any(review["decision"] == "verified" for review in changed.json()["data"]["review_history"])
+    assert client.get("/api/v1/reviews/queue", headers=reviewer_headers).json()["data"][0]["id"] == challenge_id
+    with SessionLocal() as db:
+        assert db.scalar(select(SolutionEmbedding.id).where(SolutionEmbedding.solution_id == solution_id)) is None
+
+
+def test_request_changes_edit_resubmit_approve_search_profile_and_feedback(repository_fixture, monkeypatch):
+    monkeypatch.setattr("app.api.search.BedrockEmbeddingAdapter", _FakeEmbeddingAdapter)
+    client = TestClient(create_app())
+    author = repository_fixture["users"]["author"]
+    author_headers = _headers(client, author.email)
+    reviewer_headers = _headers(client, repository_fixture["users"]["reviewer"].email)
+    outsider_headers = _headers(client, repository_fixture["users"]["outsider"].email)
+
+    created = client.post("/api/v1/challenges", headers=author_headers, json=_draft_payload(repository_fixture))
+    challenge_id = created.json()["data"]["id"]
+    assert client.post(f"/api/v1/challenges/{challenge_id}/submit", headers=author_headers).status_code == 200
+    solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == challenge_id).scalar()
+
+    changes = client.post(
+        "/api/v1/reviews",
+        headers=reviewer_headers,
+        json={"solution_id": str(solution_id), "decision": "changes_requested", "notes": "Add the exact verification step."},
+    )
+    assert changes.status_code == 201
+    returned = client.get(f"/api/v1/challenges/{challenge_id}", headers=author_headers).json()["data"]
+    assert returned["status"] == "changes_requested"
+    assert returned["review_history"][0]["notes"] == "Add the exact verification step."
+
+    edited = client.patch(
+        f"/api/v1/challenges/{challenge_id}",
+        headers=author_headers,
+        json={
+            "expected_updated_at": returned["updated_at"],
+            "solution": {
+                "root_cause": "The Docker image copied the package into an unexpected path.",
+                "resolution_steps": ["Correct the Docker COPY path.", "Rebuild the image.", "Confirm the service imports on startup."],
+                "code_snippets": ["python -c \"import service\""],
+            },
+        },
+    )
+    assert edited.status_code == 200
+    assert client.post(f"/api/v1/challenges/{challenge_id}/submit", headers=author_headers).status_code == 200
+    approved = client.post("/api/v1/reviews", headers=reviewer_headers, json={"solution_id": str(solution_id), "decision": "verified"})
+    assert approved.status_code == 201
+
+    searched = client.post(
+        "/api/v1/search",
+        headers=outsider_headers,
+        json={"query": "ModuleNotFoundError: No module named 'service'", "include_summary": False},
+    )
+    assert searched.status_code == 200
+    assert any(result["challenge_id"] == challenge_id for result in searched.json()["data"]["results"])
+
+    profile = client.get(f"/api/v1/profiles/{author.id}", headers=outsider_headers)
+    assert profile.status_code == 200
+    assert any(item["challenge_id"] == challenge_id for item in profile.json()["data"]["verified_solutions"])
+
+    feedback = client.post(
+        "/api/v1/feedback",
+        headers=outsider_headers,
+        json={"solution_id": str(solution_id), "value": "helpful", "comment": "The added verification step helped."},
+    )
+    assert feedback.status_code == 201
+    detail = client.get(f"/api/v1/challenges/{challenge_id}", headers=outsider_headers)
+    assert detail.json()["data"]["feedback"]["helpful"] == 1
+
+
+def test_review_approval_attempts_embedding_when_bedrock_is_configured(repository_fixture, monkeypatch):
+    client = TestClient(create_app())
+    settings = Settings(
+        **{
+            "APP_ENV": "test",
+            "JWT" + "_SECRET": "fictional",
+            "BEDROCK_EMBEDDINGS_ENABLED": True,
+            "AWS_REGION": "us-east-1",
+            "BEDROCK_EMBEDDING_MODEL_ID": "amazon.titan-embed-text-v2:0",
+            "BEDROCK_EMBEDDING_DIMENSIONS": 1024,
+        }
+    )
+    app = client.app
+    app.dependency_overrides[get_settings] = lambda: settings
+    calls: list[str] = []
+
+    class FakeEmbeddingAdapter:
+        def __init__(self, configured_settings):
+            assert configured_settings.bedrock_embeddings_enabled is True
+
+    def fake_embed(db, *, solution_id, adapter):
+        calls.append(str(solution_id))
+        return object(), True
+
+    monkeypatch.setattr("app.api.repository.BedrockEmbeddingAdapter", FakeEmbeddingAdapter)
+    monkeypatch.setattr("app.api.repository.embed_verified_solution", fake_embed)
+
+    author_headers = _headers(client, repository_fixture["users"]["author"].email)
+    reviewer_headers = _headers(client, repository_fixture["users"]["reviewer"].email)
+    created = client.post("/api/v1/challenges", headers=author_headers, json=_draft_payload(repository_fixture))
+    challenge_id = created.json()["data"]["id"]
+    assert client.post(f"/api/v1/challenges/{challenge_id}/submit", headers=author_headers).status_code == 200
+    solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == challenge_id).scalar()
+
+    reviewed = client.post("/api/v1/reviews", headers=reviewer_headers, json={"solution_id": str(solution_id), "decision": "verified"})
+
+    assert reviewed.status_code == 201
+    assert reviewed.json()["data"]["embedding_status"] == "generated"
+    assert calls == [str(solution_id)]
+    app.dependency_overrides.clear()
+
+
 def test_hybrid_search_exact_match_filters_authorization_and_logs(repository_fixture, monkeypatch):
     monkeypatch.setattr("app.api.search.BedrockEmbeddingAdapter", _FakeEmbeddingAdapter)
     monkeypatch.setattr("app.api.search.BedrockGroundedGenerationAdapter", _FakeGroundedGenerationAdapter)
@@ -283,7 +605,21 @@ def test_hybrid_search_exact_match_filters_authorization_and_logs(repository_fix
     solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == challenge_id).scalar()
     assert client.post("/api/v1/reviews", headers=reviewer_headers, json={"solution_id": str(solution_id), "decision": "verified"}).status_code == 201
 
-    searched = client.post("/api/v1/search", headers=outsider_headers, json={"query": "ModuleNotFoundError: No module named 'service'", "filters": {"verified_only": True}, "page": 1, "page_size": 10, "sort": "relevance", "include_summary": False})
+    searched = client.post(
+        "/api/v1/search",
+        headers=outsider_headers,
+        json={
+            "query": "ModuleNotFoundError: No module named 'service'",
+            "filters": {
+                "verified_only": True,
+                "technology_ids": [str(repository_fixture["technology"].id)],
+            },
+            "page": 1,
+            "page_size": 10,
+            "sort": "relevance",
+            "include_summary": False,
+        },
+    )
     assert searched.status_code == 200
     payload = searched.json()
     assert payload["data"]["service_status"]["semantic_search"] == "available"

@@ -1,60 +1,92 @@
 # RAG and Retrieval Design
 
-## 1. Non-negotiable retrieval sequence
+## Objective
 
-1. Authenticate the employee.
-2. Accept and validate the search query.
-3. Extract optional metadata filters.
-4. Create the query embedding through Amazon Bedrock.
-5. Run pgvector similarity search.
-6. Run PostgreSQL full-text search.
-7. Match normalized exact error-message fragments.
-8. Apply visibility and authorization filters.
-9. Merge candidate results.
-10. Rerank candidates.
-11. Apply a confidence threshold.
-12. Retrieve structured employee information from PostgreSQL.
-13. Send only permitted retrieved solution context to Bedrock.
-14. Generate a grounded summary.
-15. Return citations to original solution records.
+Return the most relevant authorized historical solutions and the structured profile of the engineer who solved them. AI improves retrieval and summarization; it never invents the solver.
 
-Phases 7 and 8 implement the full sequence. Phase 8 runs only after Phase 7 has returned authorized, confidence-passing results. It never creates a synthetic vector or generated prose. `semantic_search` is `available` only after the embedding call succeeds; `grounded_summary` is `available` only after a validated generation response is returned.
+## Retrieval pipeline
 
-## 2. Embedding document contract
+1. Authenticate the user.
+2. Normalize query and metadata filters.
+3. Run PostgreSQL weighted full-text search.
+4. Extract and match deterministic technical error fragments.
+5. When an embedding provider is configured, embed the query in `query` mode and run pgvector cosine search against embeddings created in `passage` mode.
+6. Merge candidates by immutable solution ID.
+7. Apply object authorization.
+8. Score and threshold each candidate.
+9. Sort and paginate eligible results.
+10. Load structured solver data from PostgreSQL.
+11. Optionally generate a grounded summary from the globally highest-ranked authorized technical records.
 
-One current embedding document is created per verified/retrievable solution. It contains title, technical problem description, symptoms, sanitized exact error message, environment, technology names, root cause, resolution steps, prevention notes, and non-sensitive code snippet text. It excludes employee names, email addresses, job titles, teams/departments, contact details, role, raw permissions, reviewer names, and any secret detected in user content.
+## Embedding document
 
-The `content_hash` is SHA-256 of the canonical permitted technical document plus embedding model ID. A changed hash triggers re-embedding; unchanged records do not invoke Bedrock. A dimension/model change requires an ADR and controlled re-embedding migration.
+The canonical document includes:
 
-## 3. Candidate retrieval
+- title
+- technology names
+- environment
+- problem description
+- symptoms
+- exact error
+- root cause
+- resolution steps
+- code evidence
+- prevention notes
 
-- Vector: cosine similarity through pgvector, up to 100 candidates for the configured embedding model.
-- Full text and exact error: PostgreSQL weighted `tsvector`, normalized exact-error comparison, and trigram support, up to 20 candidates.
-- Metadata: technology, verified-only, department, team, and visibility are narrowing filters, never client-authorized overrides.
-- Authorization: `can_view_challenge` is applied before a candidate enters the merge set.
+It excludes employee identity, contact information, organization metadata, ownership, review status, roles, permissions, credentials, and detected secrets.
 
-A verified FTS/exact-error candidate remains eligible if it is awaiting its embedding. This preserves useful search after review or content updates without pretending it has a semantic score.
+The content hash combines the canonical document with the embedding model ID. Unchanged records do not invoke the embedding provider again. A materially edited verified solution returns to review and stale embeddings are removed.
 
-## 4. Merge, rerank, and threshold
+## Default local models
 
-The approved initial score is:
+```text
+Embedding: nvidia/nemotron-3-embed-1b
+Chat: moonshotai/kimi-k2.6
+```
 
-`score = 0.40*semantic + 0.25*fts + 0.20*exact_error + 0.05*technology + 0.05*verification + 0.03*helpful_feedback + 0.02*recency`
+The embedding adapter uses `passage` for stored solution records and `query` for user searches. The current model output is validated against the configured dimension.
 
-Each input is normalized to `[0,1]`. Unavailable signals are reweighted over available signals. Phase 7 does not yet collect helpful-feedback signals, so the active score uses semantic (0.40), FTS (0.25), exact error (0.20), optional technology (0.05), verification (0.05), and recency (0.02). The initial candidate limits are 100 vector and 20 FTS/exact candidates. `SEARCH_RESULT_THRESHOLD` defaults to `0.45` and is the sole eligibility and no-answer threshold: every candidate below it is excluded before sorting, totals, pagination, audit result counts, and Bedrock context selection; when no eligible candidate remains, the response is `no_answer=true`.
+## Ranking
 
-Results sort by score, solved date descending, then UUID for a stable final tie break. The Phase 7 confidence gate uses the top eligible reranked score. Below threshold, return `no_answer=true` with the approved no-answer UI copy; never select or suggest a probable expert. Match explanations are deterministic and limited to three: exact error text, keyword/FTS evidence, selected technology, and semantic context in that priority order. `Similar technical context` appears only for a semantic score of at least `0.60`; lower semantic scores may contribute to rank but do not receive that explanation. Grounded summaries use the globally highest-ranked authorized eligible solutions, capped at `RAG_MAX_CONTEXT_SOLUTIONS`, even when the request displays a later pagination page. Score separation and weight changes require evaluation evidence and, where architectural, an ADR.
+Available normalized signals are combined deterministically:
 
-## 5. Grounded generation
+- semantic similarity: 0.40
+- PostgreSQL full-text rank: 0.25
+- exact-error evidence: 0.20
+- selected technology match: 0.05
+- verified status: 0.05
+- recency: 0.02
 
-Phase 8 sends only the first three authorized, confidence-passing technical records to Bedrock. The record body is reconstructed from the same permitted technical document contract used for embeddings; it excludes employees, contact data, ownership, verification, roles, permissions, and organization metadata. The system prompt requires JSON only, an inline immutable `solution_id` citation for every claim, and an allow-listed citations array.
+Unavailable signals are reweighted over the signals that are present. Full-text rank does not include an exact-error bonus; exact error contributes only once. Scores are bounded to `[0,1]` and deterministic tie-breaking uses score, update time, and stable IDs.
 
-The adapter rejects malformed JSON, citations outside the supplied source set, duplicate citations, uncited non-empty summaries, citations not present inline with claims, detected email/contact data, and detected secrets. It returns source records with `summary=null` and a safe summary-status/error when Bedrock is unavailable or invalid; it never replaces that state with fabricated prose. A no-answer result never invokes the generation model.
+`SEARCH_RESULT_THRESHOLD` is the single eligibility/no-answer threshold. Candidates below it are removed before totals, pagination, audit counts, and summary context selection.
 
-## 6. Security and failure handling
+## Match reasons
 
-Bedrock IAM permits only selected model invocation actions in the selected region. Timeouts and response failures produce a dependency-unavailable response without synthetic vectors. Query text is secret-scanned before Bedrock invocation. Retrieval logs must not store prohibited contact data, and no denied content may reach a Bedrock request.
+Reasons are derived from retrieval evidence, not generated prose. Examples:
 
-## 7. Evaluation and observability
+- Exact error match
+- Keyword match
+- Same technology
+- Similar technical context
+- Verified solution
 
-The deterministic fictional seed is the Phase 7 evaluation corpus: 36 solution records, with repeated scenario variants, plus no-answer and permission cases in `tests/fixtures/rag_evaluation.jsonl`. Each row has `query`, `expected_solution_id`, `expected_solver_id`, `expected_technology_ids`, `expected_top_five_ids`, `expected_no_answer`, `caller_scope`, expected permission behavior, and expected citation behavior. Measure Recall@5, MRR, solver accuracy, permission-filter accuracy, no-answer accuracy, citation validity, and latency by channel before changing scoring or threshold values.
+A semantic explanation is emitted only above the documented semantic confidence floor.
+
+## Grounded summary
+
+When `include_summary=true`, the backend reconstructs at most `RAG_MAX_CONTEXT_SOLUTIONS` globally ranked authorized technical records. The chat model must return JSON with:
+
+```json
+{"summary":"A cited summary","citations":["solution UUID"]}
+```
+
+Every claim requires an inline source UUID. The backend rejects malformed JSON, unknown/duplicate citations, uncited summaries, contact information, and detected secrets. No-answer searches do not invoke generation. Provider failure returns the source results with a safe unavailable status and never fabricates prose.
+
+## Modes
+
+- AI disabled or unavailable: keyword and exact-error retrieval remains active.
+- Embeddings configured: hybrid retrieval is active.
+- Chat configured and requested: grounded summary is added after retrieval.
+
+A separate reranker is optional and not required for the final local MVP.
