@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 import { AuthProvider } from "./auth/AuthProvider";
-import { createChallenge } from "./services/api";
+import { createChallenge, updateMyProfile } from "./services/api";
 
 vi.mock("./services/api", () => ({
   login: vi.fn(async (payload: { email: string }) => {
@@ -16,12 +16,14 @@ vi.mock("./services/api", () => ({
     return { access_token: "test-token", user: { id: role === "reviewer" ? "2" : "1", email: payload.email, role, is_active: true, profile: null } };
   }),
   logout: vi.fn(async () => undefined),
+  fetchCurrentUser: vi.fn(async () => ({ id: "1", email: "updated.avery@example.test", role: "employee", is_active: true, profile: null })),
   fetchApiHealth: vi.fn(async () => ({ data: { service: "api", status: "ok", environment: "test", version: "0.1.0", rag_enabled: false }, meta: {} })),
   listChallenges: vi.fn(async () => ({ data: [], meta: { total: 0 } })),
   reviewQueue: vi.fn(async () => [{ id: "challenge-1", title: "Container startup failure", status: "submitted", visibility: "company", owner_user_id: "1", updated_at: "2026-07-22T00:00:00Z" }]),
   reviewSolution: vi.fn(async () => ({ data: { id: "review-1", embedding_status: "disabled_until_configured" }, meta: {} })),
   recordFeedback: vi.fn(async () => ({ id: "feedback-1", solution_id: "solution-1", value: "resolved_my_issue", comment: null, updated_at: "2026-07-22T00:00:00Z" })),
   listTechnologies: vi.fn(async () => [{ id: "technology-1", name: "Docker", slug: "docker", category: "containers" }]),
+  listEmployeeProfiles: vi.fn(async () => ({ data: [{ user_id: "solver-1", display_name: "Avery Engineer", job_title: "Platform Engineer", team: "Runtime", department: "Platform Engineering", contact_email: "avery@example.test", contact_handle: "@avery", skills: ["Docker troubleshooting"], avatar_key: null, initials: "AE" }], meta: { total: 1 } })),
   getChallenge: vi.fn(async () => ({
     id: "draft-1",
     solution_id: "solution-1",
@@ -151,7 +153,7 @@ vi.mock("./services/api", () => ({
     helpful_contribution_count: null,
     verified_solutions: [{ challenge_id: "challenge-1", solution_id: "solution-1", title: "Container startup failure", status: "verified", visibility: "company", solved_at: "2026-07-21", updated_at: "2026-07-21T00:00:00Z", technologies: ["Docker"] }]
   })),
-  updateMyProfile: vi.fn(async () => ({
+  updateMyProfile: vi.fn(async (payload: { contact_email?: string }) => ({
     user_id: "solver-1",
     display_name: "Avery Engineer",
     job_title: "Platform Engineer",
@@ -159,7 +161,7 @@ vi.mock("./services/api", () => ({
     department: "Platform Engineering",
     department_id: "department-1",
     team_id: "team-1",
-    contact_email: "avery@example.test",
+    contact_email: payload.contact_email ?? "avery@example.test",
     contact_handle: "@avery",
     skills: ["Docker troubleshooting", "Incident review"],
     technologies: ["Docker"],
@@ -245,6 +247,22 @@ describe("App", () => {
     expect(screen.getByText("Docker troubleshooting")).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "Contact the solver" })).toHaveAttribute("href", "mailto:avery@example.test");
     expect(screen.getByRole("link", { name: /Container startup failure/ })).toHaveAttribute("href", "/solutions/challenge-1");
+  });
+
+  it("updates work email from the editable profile form", async () => {
+    const user = userEvent.setup();
+    renderApp("/people/me");
+    await signIn(user);
+
+    expect(await screen.findByRole("heading", { name: "Avery Engineer" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    const email = screen.getByLabelText("Work email");
+    await user.clear(email);
+    await user.type(email, "updated.avery@example.test");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalledWith(expect.objectContaining({ contact_email: "updated.avery@example.test" }), expect.anything()));
+    expect(await screen.findByText("Profile updated.")).toBeInTheDocument();
   });
 
   it("saves a solved-problem draft through the authoring workflow", async () => {

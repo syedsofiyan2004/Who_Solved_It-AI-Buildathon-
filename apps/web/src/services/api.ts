@@ -119,6 +119,7 @@ export async function getEmployeeProfile(userId: string) {
 export type EmployeeProfileUpdate = {
   display_name?: string;
   job_title?: string;
+  contact_email?: string;
   bio?: string | null;
   contact_handle?: string | null;
   skills?: string[];

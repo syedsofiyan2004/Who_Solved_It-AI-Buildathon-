@@ -13,6 +13,7 @@ import { getEmployeeProfile, updateMyProfile, type EmployeeProfile } from "../se
 type ProfileForm = {
   display_name: string;
   job_title: string;
+  contact_email: string;
   contact_handle: string;
   bio: string;
   skills: string;
@@ -21,7 +22,7 @@ type ProfileForm = {
 export function ProfilePage() {
   const { userId = "me" } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { refreshUser, user } = useAuth();
   const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: ["employee-profile", userId], queryFn: () => getEmployeeProfile(userId), staleTime: 5 * 60 * 1000 });
   const [editing, setEditing] = useState(false);
@@ -29,9 +30,10 @@ export function ProfilePage() {
   const canEdit = userId === "me" || (profile.data && user?.id === profile.data.user_id);
   const updateMutation = useMutation({
     mutationFn: updateMyProfile,
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
       queryClient.setQueryData(["employee-profile", userId], updated);
       queryClient.setQueryData(["employee-profile", "me"], updated);
+      await refreshUser();
       setEditing(false);
       setSavedMessage(copy.profile.profileSaved);
     },
@@ -105,7 +107,7 @@ export function ProfilePage() {
   );
 }
 
-function ProfileEditor({ error, isSaving, onCancel, onSave, profile }: { error: string | null; isSaving: boolean; profile: EmployeeProfile; onCancel: () => void; onSave: (payload: { display_name: string; job_title: string; contact_handle: string | null; bio: string | null; skills: string[] }) => void }) {
+function ProfileEditor({ error, isSaving, onCancel, onSave, profile }: { error: string | null; isSaving: boolean; profile: EmployeeProfile; onCancel: () => void; onSave: (payload: { display_name: string; job_title: string; contact_email: string; contact_handle: string | null; bio: string | null; skills: string[] }) => void }) {
   const [form, setForm] = useState<ProfileForm>(() => fromProfile(profile));
 
   useEffect(() => {
@@ -118,6 +120,7 @@ function ProfileEditor({ error, isSaving, onCancel, onSave, profile }: { error: 
     onSave({
       display_name: form.display_name.trim(),
       job_title: form.job_title.trim(),
+      contact_email: form.contact_email.trim().toLowerCase(),
       contact_handle: form.contact_handle.trim() || null,
       bio: form.bio.trim() || null,
       skills,
@@ -133,13 +136,14 @@ function ProfileEditor({ error, isSaving, onCancel, onSave, profile }: { error: 
         </div>
         <div className="flex gap-2">
           <button className="pressable inline-flex h-9 items-center justify-center rounded-control border border-border px-3 text-sm font-medium hover:bg-surface-muted" disabled={isSaving} onClick={onCancel} type="button">{copy.action.cancel}</button>
-          <button className="pressable inline-flex h-9 items-center justify-center gap-2 rounded-control border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-accent-hover disabled:opacity-60" disabled={isSaving || !form.display_name.trim() || !form.job_title.trim()} type="submit"><Save className="h-4 w-4" />{isSaving ? copy.submit.saving : copy.action.saveProfile}</button>
+          <button className="pressable inline-flex h-9 items-center justify-center gap-2 rounded-control border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-accent-hover disabled:opacity-60" disabled={isSaving || !form.display_name.trim() || !form.job_title.trim() || !form.contact_email.trim()} type="submit"><Save className="h-4 w-4" />{isSaving ? copy.submit.saving : copy.action.saveProfile}</button>
         </div>
       </div>
       {error && <p className="mt-4 rounded-control border border-danger/25 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <TextField label={copy.profile.displayName} required value={form.display_name} onChange={(display_name) => setForm((current) => ({ ...current, display_name }))} />
         <TextField label={copy.profile.jobTitle} required value={form.job_title} onChange={(job_title) => setForm((current) => ({ ...current, job_title }))} />
+        <TextField label={copy.profile.workEmail} required type="email" value={form.contact_email} onChange={(contact_email) => setForm((current) => ({ ...current, contact_email }))} />
         <TextField label={copy.profile.contactHandle} value={form.contact_handle} onChange={(contact_handle) => setForm((current) => ({ ...current, contact_handle }))} />
         <TextField help={copy.profile.skillsHelp} label={copy.profile.skills} value={form.skills} onChange={(skills) => setForm((current) => ({ ...current, skills }))} />
         <label className="block text-sm font-semibold lg:col-span-2">{copy.profile.bio}<textarea className="mt-2 min-h-28 w-full rounded-app border border-input bg-surface p-3 text-sm leading-6 text-text outline-none transition focus:border-accent focus:shadow-focus" value={form.bio} onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} /></label>
@@ -152,14 +156,15 @@ function fromProfile(profile: EmployeeProfile): ProfileForm {
   return {
     display_name: profile.display_name,
     job_title: profile.job_title,
+    contact_email: profile.contact_email,
     contact_handle: profile.contact_handle ?? "",
     bio: profile.bio ?? "",
     skills: profile.skills.join(", "),
   };
 }
 
-function TextField({ help, label, onChange, required = false, value }: { help?: string; label: string; required?: boolean; value: string; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-semibold">{label}<input className="mt-2 h-10 w-full rounded-control border border-input bg-surface px-3 text-sm text-text outline-none transition focus:border-accent focus:shadow-focus" required={required} value={value} onChange={(event) => onChange(event.target.value)} />{help && <span className="mt-1 block text-xs font-normal text-text-muted">{help}</span>}</label>;
+function TextField({ help, label, onChange, required = false, type = "text", value }: { help?: string; label: string; required?: boolean; type?: "email" | "text"; value: string; onChange: (value: string) => void }) {
+  return <label className="block text-sm font-semibold">{label}<input className="mt-2 h-10 w-full rounded-control border border-input bg-surface px-3 text-sm text-text outline-none transition focus:border-accent focus:shadow-focus" required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} />{help && <span className="mt-1 block text-xs font-normal text-text-muted">{help}</span>}</label>;
 }
 
 function Meta({ label, value }: { label: string; value: string }) {

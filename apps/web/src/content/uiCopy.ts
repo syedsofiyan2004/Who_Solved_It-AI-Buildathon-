@@ -231,6 +231,7 @@ export const copy = {
     editHint: "Keep your approved contact handle, skills, and short bio current so colleagues know when to reach you.",
     bio: "Bio",
     contactHandle: "Contact handle",
+    workEmail: "Work email",
     displayName: "Display name",
     jobTitle: "Job title",
     skillsHelp: "Separate skills with commas.",

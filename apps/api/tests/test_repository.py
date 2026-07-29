@@ -401,6 +401,66 @@ def test_employee_profile_returns_contact_stats_and_authorized_verified_solution
     assert solver["initials"] == "A"
 
 
+def test_profile_email_update_changes_login_credentials(repository_fixture):
+    client = TestClient(create_app())
+    author = repository_fixture["users"]["author"]
+    old_email = author.email
+    new_email = f"updated-{uuid4()}@example.test"
+    headers = _headers(client, old_email)
+
+    updated = client.patch(
+        "/api/v1/profiles/me",
+        headers=headers,
+        json={"contact_email": new_email},
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["data"]["contact_email"] == new_email
+
+    old_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": old_email, "password": "correct-password"},
+    )
+    assert old_login.status_code == 401
+
+    new_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": new_email, "password": "correct-password"},
+    )
+    assert new_login.status_code == 200
+    assert new_login.json()["data"]["user"]["email"] == new_email
+
+    with SessionLocal() as db:
+        user = db.get(User, author.id)
+        profile = db.get(EmployeeProfile, author.id)
+        assert user is not None
+        assert profile is not None
+        assert user.email == new_email
+        assert profile.contact_email == new_email
+
+
+def test_profile_email_update_rejects_email_owned_by_another_user(repository_fixture):
+    client = TestClient(create_app())
+    author = repository_fixture["users"]["author"]
+    reviewer = repository_fixture["users"]["reviewer"]
+    headers = _headers(client, author.email)
+
+    updated = client.patch(
+        "/api/v1/profiles/me",
+        headers=headers,
+        json={"contact_email": reviewer.email},
+    )
+
+    assert updated.status_code == 409
+    assert updated.json()["error"]["code"] == "email_in_use"
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": author.email, "password": "correct-password"},
+    )
+    assert login.status_code == 200
+
+
 def test_solution_feedback_can_be_created_and_changed(repository_fixture):
     client = TestClient(create_app())
     author_headers = _headers(client, repository_fixture["users"]["author"].email)

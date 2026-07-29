@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { BrainCircuit, CheckCircle2, ChevronLeft, ChevronRight, DatabaseZap, Filter, LockKeyhole, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -12,7 +13,7 @@ import { Button } from "../components/ui/Button";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { StatePanel } from "../components/ui/StatePanel";
 import { copy } from "../content/uiCopy";
-import { getEmployeeProfile, listTechnologies, searchSolutions, type EmployeeProfile, type SearchResult } from "../services/api";
+import { getEmployeeProfile, listTechnologies, searchSolutions, type EmployeeProfile, type SearchResponse, type SearchResult } from "../services/api";
 
 type Sort = "relevance" | "newest";
 
@@ -146,6 +147,7 @@ export function SearchPage() {
 
             {resultQuery.isLoading && <LoadingSkeleton rows={5} />}
             {resultQuery.isError && <StatePanel kind="error" onRetry={() => void resultQuery.refetch()} />}
+            {response && <SearchIntelligence response={response} includeSummary={includeSummary} />}
             {response && <SearchResults response={response} selectedSolutionId={selectedSolutionId} onPage={(nextPage) => setSearch({ page: String(nextPage), solution: undefined, solver: undefined })} onPreview={openSolution} onSolver={openSolver} />}
           </section>
 
@@ -179,6 +181,48 @@ function SearchFilters({ selectedTechnologyValues, sort, technologies, verifiedO
       <Button className="mt-5 w-full" onClick={onClear} variant="ghost"><Filter className="h-4 w-4" />{copy.search.clear}</Button>
     </aside>
   );
+}
+
+function SearchIntelligence({ includeSummary, response }: { includeSummary: boolean; response: Awaited<ReturnType<typeof searchSolutions>> }) {
+  const { data, meta } = response;
+  const summaryState = data.service_status.grounded_summary;
+  const semanticReady = data.service_status.semantic_search === "available";
+  const steps: { icon: LucideIcon; label: string; body: string; state: "complete" | "pending" | "blocked" }[] = [
+    { icon: LockKeyhole, label: "Authorization first", body: "Only records visible to this employee can be ranked or summarized.", state: "complete" },
+    { icon: DatabaseZap, label: "Hybrid retrieval", body: semanticReady ? "Semantic, keyword, exact-error, technology, and verification signals are merged." : "Keyword and exact-error retrieval are active while semantic search is not configured.", state: semanticReady ? "complete" : "pending" },
+    { icon: ShieldCheck, label: "Confidence gate", body: data.no_answer ? "No record passed the eligibility threshold." : `${meta.total} authorized eligible ${meta.total === 1 ? "record" : "records"} passed the threshold.`, state: data.no_answer ? "blocked" : "complete" },
+    { icon: BrainCircuit, label: "Grounded summary", body: summaryCopy(summaryState, includeSummary), state: summaryState === "available" ? "complete" : includeSummary ? "pending" : "blocked" },
+  ];
+
+  return (
+    <section className="product-card mb-5 overflow-hidden rounded-[20px] p-4">
+      <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong"><BrainCircuit className="h-3.5 w-3.5" />Retrieval trace</span>
+          <p className="mt-1 text-sm text-text-muted">How this answer is assembled before any AI-generated summary is allowed.</p>
+        </div>
+        <div className="grid flex-1 gap-2 sm:grid-cols-2 xl:max-w-4xl xl:grid-cols-4">
+          {steps.map((step) => <TraceStep key={step.label} {...step} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TraceStep({ body, icon: Icon, label, state }: { body: string; icon: LucideIcon; label: string; state: "complete" | "pending" | "blocked" }) {
+  const stateClass = state === "complete" ? "border-success/25 bg-success/5 text-success" : state === "pending" ? "border-info/25 bg-info/5 text-info" : "border-border bg-surface-muted text-text-muted";
+  return <div className={`rounded-app border px-3 py-3 ${stateClass}`}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span className="text-xs font-semibold text-text">{label}</span>{state === "complete" && <CheckCircle2 className="ml-auto h-3.5 w-3.5" />}</div><p className="mt-2 text-[11px] leading-5 text-text-muted">{body}</p></div>;
+}
+
+function summaryCopy(state: SearchResponse["service_status"]["grounded_summary"], includeSummary: boolean) {
+  if (!includeSummary) return "Not requested yet. Judges can trigger it for a reliable match.";
+  if (state === "available") return "Generated from globally top-ranked authorized solution records.";
+  if (state === "not_run_no_answer") return "Skipped because the confidence gate returned no answer.";
+  if (state === "unavailable") return "Provider unavailable; source results remain visible without fake output.";
+  if (state === "invalid_response") return "Rejected because the model response failed citation validation.";
+  if (state === "not_generated") return "Waiting for a reliable grounded response.";
+  return "Grounded generation has not started.";
 }
 
 function SearchResults({ response, selectedSolutionId, onPreview, onSolver, onPage }: { response: Awaited<ReturnType<typeof searchSolutions>>; selectedSolutionId: string | null; onPreview: (result: SearchResult) => void; onSolver: (result: SearchResult) => void; onPage: (page: number) => void }) {

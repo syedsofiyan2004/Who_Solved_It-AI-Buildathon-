@@ -20,7 +20,7 @@
 | Connected product navigation | Implemented | Persistent shell and URL-preserved search/detail/solver state |
 | Light and dark themes | Implemented | Semantic color tokens across product surfaces |
 | Responsive UI | Implemented | Desktop master-detail workspace and mobile detail sheets |
-| Showcase corpus | Implemented | 43 supplied employee profiles and 511 generated original synthetic technical records |
+| Showcase corpus | Implemented | 43 supplied employee profiles and 595 generated original synthetic technical records |
 | Local Docker setup | Implemented | React, FastAPI, PostgreSQL, pgvector |
 | Hosted deployment | Excluded | Not required for the zero-cost buildathon scope |
 

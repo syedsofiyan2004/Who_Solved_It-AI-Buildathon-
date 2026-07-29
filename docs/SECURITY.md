@@ -6,6 +6,7 @@
 - The browser never receives `NVIDIA_API_KEY`, AI provider keys, JWT secrets, or database credentials.
 - The API uses the normal provider credential chain and sends only approved technical context.
 - Passwords are hashed; JWTs are short-lived and validated for issuer, audience, expiry, subject, and token ID.
+- Self-service work-email updates are constrained to the authenticated employee profile, validated as email-shaped input, rejected on duplicate account ownership, and committed to both the profile contact field and login credential.
 - Role-based and object-level authorization applies to challenge detail, edits, reviews, profiles, search candidates, contact fields, attachments, feedback, and RAG context.
 - Database queries remain parameterized through SQLAlchemy.
 - Upload MIME type, size, filename, digest, and pending-scan state are validated.

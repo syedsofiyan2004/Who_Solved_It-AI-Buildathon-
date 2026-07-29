@@ -219,8 +219,8 @@ The current review build is implemented and runnable with Docker Compose. It inc
 The current showcase seed generates:
 
 - 43 employee profiles;
-- 511 generated technical solution records;
-- 427 generated verified solution records.
+- 595 generated technical solution records;
+- 497 generated verified solution records.
 
 The local database may contain a higher total count if older local records were preserved instead of resetting the database.
 
