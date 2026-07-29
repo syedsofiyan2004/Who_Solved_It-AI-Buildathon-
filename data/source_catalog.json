@@ -1,0 +1,67 @@
+{
+  "purpose": "Reference catalogue for the synthetic Minfy Resolve incident corpus. Records are original synthetic examples; these sources identify public technical documentation categories used to shape realistic error patterns.",
+  "generated_records_are_synthetic": true,
+  "private_company_material_used": false,
+  "sources": [
+    {
+      "category": "terraform_state_locking",
+      "publisher": "HashiCorp Developer",
+      "url": "https://developer.hashicorp.com/terraform/language/state/locking",
+      "used_for": ["terraform-lock"]
+    },
+    {
+      "category": "terraform_force_unlock",
+      "publisher": "HashiCorp Developer",
+      "url": "https://developer.hashicorp.com/terraform/cli/commands/force-unlock",
+      "used_for": ["terraform-lock"]
+    },
+    {
+      "category": "aws_oidc_role_trust",
+      "publisher": "AWS Documentation",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html",
+      "used_for": ["oidc-role", "iam-session-tag-deny"]
+    },
+    {
+      "category": "aws_sts_web_identity",
+      "publisher": "AWS Documentation",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html",
+      "used_for": ["oidc-role"]
+    },
+    {
+      "category": "dockerfile_build_instructions",
+      "publisher": "Docker Docs",
+      "url": "https://docs.docker.com/reference/dockerfile/",
+      "used_for": ["docker-module", "docker-check-entrypoint"]
+    },
+    {
+      "category": "dockerfile_workdir_copy",
+      "publisher": "Docker Docs",
+      "url": "https://docs.docker.com/get-started/docker-concepts/building-images/writing-a-dockerfile/",
+      "used_for": ["docker-module"]
+    },
+    {
+      "category": "postgres_activity_monitoring",
+      "publisher": "PostgreSQL Documentation",
+      "url": "https://www.postgresql.org/docs/current/monitoring-stats.html",
+      "used_for": ["postgres-lock", "postgres-statement-lock", "postgres-plan-regression"]
+    },
+    {
+      "category": "postgres_locking",
+      "publisher": "PostgreSQL Documentation",
+      "url": "https://www.postgresql.org/docs/current/explicit-locking.html",
+      "used_for": ["postgres-lock", "postgres-deadlock-timeout"]
+    },
+    {
+      "category": "prometheus_label_cardinality",
+      "publisher": "Prometheus Documentation",
+      "url": "https://prometheus.io/docs/practices/naming/",
+      "used_for": ["prom-cardinality", "prometheus-user-label"]
+    },
+    {
+      "category": "pytorch_cuda_memory",
+      "publisher": "PyTorch Documentation",
+      "url": "https://docs.pytorch.org/docs/stable/torch_cuda_memory.html",
+      "used_for": ["cuda-oom", "gpu-fragmentation", "gpu-driver-mismatch"]
+    }
+  ]
+}

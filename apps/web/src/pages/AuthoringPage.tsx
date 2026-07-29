@@ -29,6 +29,7 @@ type FormState = {
   rootCause: string;
   resolutionSteps: string;
   codeSnippets: string;
+  preventionNotes: string;
   technologyIds: string[];
   visibility: "company" | "department" | "team" | "restricted" | "administrator";
 };
@@ -44,6 +45,7 @@ const emptyForm: FormState = {
   rootCause: "",
   resolutionSteps: "",
   codeSnippets: "",
+  preventionNotes: "",
   technologyIds: [],
   visibility: "company",
 };
@@ -212,7 +214,7 @@ export function AuthoringPage() {
           <div className="mb-6 border-b border-border pb-5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Step {step + 1} of {steps.length}</p><h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-text">{steps[step]}</h2></div>
           {step === 0 && <Fields><TextInput label={copy.submit.titleLabel} required value={form.title} onChange={(title) => update("title", title)} /><TextArea label={copy.submit.problemLabel} value={form.problemDescription} onChange={(value) => update("problemDescription", value)} rows={6} /><TextArea label={copy.submit.environmentLabel} value={form.environment} onChange={(value) => update("environment", value)} rows={4} /><TextArea label={copy.submit.symptomsLabel} value={form.symptoms} onChange={(value) => update("symptoms", value)} rows={5} /><TextArea label={copy.submit.errorLabel} value={form.exactErrorMessage} onChange={(value) => update("exactErrorMessage", value)} rows={4} code /></Fields>}
           {step === 1 && <Fields><TextArea label={copy.submit.rootCauseLabel} value={form.rootCause} onChange={(value) => update("rootCause", value)} rows={7} /><fieldset><legend className="text-sm font-semibold">{copy.submit.technologiesLabel}</legend><div className="mt-3 flex max-h-64 flex-wrap gap-2 overflow-auto rounded-app border border-border bg-surface-muted/30 p-3">{technologies.data?.map((technology) => <label className="inline-flex min-h-9 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm" key={technology.id}><input checked={form.technologyIds.includes(technology.id)} onChange={() => toggleTechnology(technology.id)} type="checkbox" />{technology.name}</label>)}</div></fieldset><label className="block text-sm font-semibold" htmlFor="visibility">{copy.submit.visibilityLabel}<select className="mt-2 h-10 w-full rounded-control border border-border bg-surface px-2 text-sm" id="visibility" value={form.visibility} onChange={(event) => update("visibility", event.target.value as FormState["visibility"])}><option value="company">Company</option><option value="department">Department</option><option value="team">Team</option><option value="restricted">Restricted</option></select></label></Fields>}
-          {step === 2 && <Fields><TextArea label={copy.submit.stepsLabel} value={form.resolutionSteps} onChange={(value) => update("resolutionSteps", value)} rows={9} /><TextArea label={copy.submit.codeLabel} value={form.codeSnippets} onChange={(value) => update("codeSnippets", value)} rows={8} code /><label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-control border border-border px-3 text-sm font-medium hover:bg-surface-muted"><Upload className="h-4 w-4" aria-hidden="true" />{copy.submit.uploadAttachment}<input className="sr-only" type="file" onChange={upload} /></label></Fields>}
+          {step === 2 && <Fields><TextArea label={copy.submit.stepsLabel} value={form.resolutionSteps} onChange={(value) => update("resolutionSteps", value)} rows={9} /><TextArea label={copy.submit.preventionLabel} value={form.preventionNotes} onChange={(value) => update("preventionNotes", value)} rows={4} /><TextArea label={copy.submit.codeLabel} value={form.codeSnippets} onChange={(value) => update("codeSnippets", value)} rows={8} code /><label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-control border border-border px-3 text-sm font-medium hover:bg-surface-muted"><Upload className="h-4 w-4" aria-hidden="true" />{copy.submit.uploadAttachment}<input className="sr-only" type="file" onChange={upload} /></label></Fields>}
           {step === 3 && <Review form={form} canSubmit={Boolean(canSubmit)} />}
           <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
             <div className="flex gap-2"><Button disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>{copy.action.back}</Button><Button disabled={step === steps.length - 1} onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))}>{copy.action.next}</Button></div>
@@ -221,7 +223,7 @@ export function AuthoringPage() {
         </form>
         <aside className="h-fit space-y-4 xl:sticky xl:top-[96px]">
           <section className="product-card rounded-[20px] p-4"><div className="relative flex items-center gap-2 text-sm font-semibold"><Save className="h-4 w-4 text-brand-strong" />Draft status</div><p className="relative mt-3 text-sm text-text-muted">{saveMutation.isPending ? copy.submit.saving : dirty ? copy.submit.unsaved : form.id ? copy.submit.saved : "Not saved yet"}</p>{form.expectedUpdatedAt && <p className="relative mt-2 text-[10px] text-text-muted">Server version: {new Date(form.expectedUpdatedAt).toLocaleTimeString()}</p>}</section>
-          <section className="product-card rounded-[20px] p-4"><div className="relative flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-brand-strong" />Before you submit</div><ul className="relative mt-3 space-y-2 text-xs leading-5 text-text-muted"><CheckItem done={Boolean(form.problemDescription.trim())} text="Problem is clearly described" /><CheckItem done={Boolean(form.symptoms.trim())} text="Symptoms or error are captured" /><CheckItem done={Boolean(form.rootCause.trim())} text="Root cause is documented" /><CheckItem done={Boolean(form.resolutionSteps.trim())} text="Resolution steps are reusable" /><CheckItem done={!hasSecretWarning} text="No obvious secret is present" /></ul></section>
+          <section className="product-card rounded-[20px] p-4"><div className="relative flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-brand-strong" />Before you submit</div><ul className="relative mt-3 space-y-2 text-xs leading-5 text-text-muted"><CheckItem done={Boolean(form.problemDescription.trim())} text="Problem is clearly described" /><CheckItem done={Boolean(form.symptoms.trim())} text="Symptoms or error are captured" /><CheckItem done={Boolean(form.rootCause.trim())} text="Root cause is documented" /><CheckItem done={Boolean(form.resolutionSteps.trim())} text="Resolution steps are reusable" /><CheckItem done={Boolean(form.preventionNotes.trim())} text="Prevention guidance is included" /><CheckItem done={!hasSecretWarning} text="No obvious secret is present" /></ul></section>
         </aside>
       </div>
     </div>
@@ -261,6 +263,7 @@ function fromChallenge(challenge: ChallengeDetail): FormState {
     rootCause: challenge.solution.root_cause,
     resolutionSteps: challenge.solution.resolution_steps.join("\n"),
     codeSnippets: challenge.solution.code_snippets.join("\n---\n"),
+    preventionNotes: challenge.solution.prevention_notes ?? "",
     technologyIds: challenge.technology_ids,
     visibility: challenge.visibility as FormState["visibility"],
   };
@@ -279,7 +282,7 @@ function toPayload(form: FormState) {
       root_cause: form.rootCause,
       resolution_steps: form.resolutionSteps.split("\n").map((item) => item.trim()).filter(Boolean),
       code_snippets: form.codeSnippets.split("\n---\n").map((item) => item.trim()).filter(Boolean),
-      prevention_notes: null,
+      prevention_notes: form.preventionNotes.trim() || null,
       solved_at: null,
     },
   };
@@ -298,7 +301,7 @@ function TextArea({ label, value, onChange, rows, code = false }: { label: strin
 }
 
 function Review({ form, canSubmit }: { form: FormState; canSubmit: boolean }) {
-  return <section className="space-y-4"><p className="text-sm text-text-muted">{copy.submit.reviewReady}</p><ReviewItem label={copy.submit.titleLabel} value={form.title} /><ReviewItem label={copy.submit.problemLabel} value={form.problemDescription} /><ReviewItem label={copy.submit.rootCauseLabel} value={form.rootCause} /><ReviewItem label={copy.submit.stepsLabel} value={form.resolutionSteps} />{!canSubmit && <p className="text-sm text-warning">{copy.submit.validation}</p>}</section>;
+  return <section className="space-y-4"><p className="text-sm text-text-muted">{copy.submit.reviewReady}</p><ReviewItem label={copy.submit.titleLabel} value={form.title} /><ReviewItem label={copy.submit.problemLabel} value={form.problemDescription} /><ReviewItem label={copy.submit.rootCauseLabel} value={form.rootCause} /><ReviewItem label={copy.submit.stepsLabel} value={form.resolutionSteps} /><ReviewItem label={copy.submit.preventionLabel} value={form.preventionNotes} />{!canSubmit && <p className="text-sm text-warning">{copy.submit.validation}</p>}</section>;
 }
 
 function ReviewItem({ label, value }: { label: string; value: string }) {

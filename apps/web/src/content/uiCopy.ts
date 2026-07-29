@@ -43,6 +43,7 @@ export const copy = {
     errorLabel: "Exact error message",
     rootCauseLabel: "Root cause",
     stepsLabel: "Resolution steps",
+    preventionLabel: "Prevention and follow-up",
     codeLabel: "Code snippets",
     technologiesLabel: "Technologies",
     visibilityLabel: "Visibility",
@@ -239,7 +240,7 @@ export const copy = {
   },
   state: {
     loading: "Loading",
-    comingSoon: "This area is not available in your current workspace.",
+    comingSoon: "No records are available in this workspace.",
     permissionTitle: "You do not have access to this content",
     permissionBody: "If you need access, contact the solution owner or an administrator.",
     notFoundTitle: "This solution is not available",

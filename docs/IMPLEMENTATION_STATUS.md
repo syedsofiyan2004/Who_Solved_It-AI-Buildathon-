@@ -20,7 +20,7 @@
 | Connected product navigation | Implemented | Persistent shell and URL-preserved search/detail/solver state |
 | Light and dark themes | Implemented | Semantic color tokens across product surfaces |
 | Responsive UI | Implemented | Desktop master-detail workspace and mobile detail sheets |
-| Showcase corpus | Implemented | 43 supplied employee profiles and 595 generated original synthetic technical records |
+| Showcase corpus | Implemented | 43 supplied employee profiles, 54 technologies, 97 incident blueprints, and 679 generated original synthetic technical records |
 | Local Docker setup | Implemented | React, FastAPI, PostgreSQL, pgvector |
 | Hosted deployment | Excluded | Not required for the zero-cost buildathon scope |
 
@@ -42,7 +42,7 @@
 | Mode | Behaviour |
 |---|---|
 | AI disabled | Keyword and exact-error search remains available |
-| NVIDIA | Semantic embeddings and grounded Kimi summaries |
+| NVIDIA or Bedrock | Semantic embeddings and grounded summaries when the selected provider is configured |
 
 ## Known showcase boundaries
 
@@ -51,6 +51,16 @@
 - The technical corpus is original synthetic data and should not be represented as production runbooks.
 - Company SSO, connected messaging systems, and production deployment are outside this review build.
 
-## Validation note
+## Latest validation
 
-Python source compilation and repository secret/package checks can be run directly. Full database tests, frontend type checking, frontend tests, and production build should be run through Docker Compose using the commands in `README.md`, which provides the approved dependency environment.
+- `docker compose exec -T api ruff check .` passed.
+- `docker compose exec -T api pytest` passed: 47 tests.
+- `docker compose exec -T api alembic upgrade head` passed.
+- `docker compose exec -T api python scripts/seed_dev.py` passed and generated 679 synthetic records.
+- `docker compose exec -T api python scripts/check_seed_quality.py` passed.
+- `docker compose exec -T web npm run typecheck` passed.
+- `docker compose exec -T web npm test` passed: 18 tests.
+- `docker compose exec -T web npm run build` passed.
+- `python apps\api\scripts\scan_secrets.py .` passed.
+- `python apps\api\scripts\package_source.py --output artifacts\knowledge-platform-source.zip` passed.
+- `python apps\api\scripts\verify_source_package.py --archive artifacts\knowledge-platform-source.zip` passed.

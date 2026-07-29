@@ -138,7 +138,7 @@ export function AppShell() {
         role={user?.role}
         userEmail={user?.email}
       />
-      <div className={`min-h-screen transition-[padding] duration-220 ${collapsed ? "lg:pl-[76px]" : "lg:pl-[264px]"}`}>
+      <div className={`min-h-screen transition-[padding] duration-220 ${collapsed ? "lg:pl-[68px]" : "lg:pl-[240px]"}`}>
         <TopBar
           dark={theme === "dark"}
           pageTitle={pageTitle}
@@ -151,7 +151,7 @@ export function AppShell() {
           onTheme={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
           onUser={() => setUserOpen((value) => !value)}
         />
-        <main className="mx-auto w-full max-w-[1540px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="mx-auto w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-7 lg:py-7">
           <Outlet />
         </main>
       </div>
@@ -163,8 +163,8 @@ export function AppShell() {
 
 function DesktopSidebar({ collapsed, groups, onCollapse, onLogout, role, userEmail }: { collapsed: boolean; groups: NavGroup[]; onCollapse: () => void; onLogout: () => void; role?: Role; userEmail?: string }) {
   return (
-    <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-border bg-surface/90 shadow-[8px_0_40px_rgb(15_23_42/0.035)] backdrop-blur-xl transition-[width] duration-220 lg:flex lg:flex-col ${collapsed ? "w-[76px]" : "w-[264px]"}`}>
-      <div className={`flex h-[72px] items-center border-b border-border ${collapsed ? "justify-center px-3" : "px-4"}`}>
+    <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-border bg-surface/90 shadow-[8px_0_40px_rgb(15_23_42/0.035)] backdrop-blur-xl transition-[width] duration-220 lg:flex lg:flex-col ${collapsed ? "w-[68px]" : "w-[240px]"}`}>
+      <div className={`flex h-[64px] items-center border-b border-border ${collapsed ? "justify-center px-3" : "px-3.5"}`}>
         <BrandMark compact={collapsed} />
         {!collapsed && (
           <button className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-control text-text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={copy.shell.collapseNavigation} onClick={onCollapse}>
@@ -179,12 +179,12 @@ function DesktopSidebar({ collapsed, groups, onCollapse, onLogout, role, userEma
       )}
       <NavGroups collapsed={collapsed} groups={groups} />
       <div className="border-t border-border p-3">
-        <div className={`product-card overflow-hidden rounded-app ${collapsed ? "flex items-center justify-center p-2" : "flex items-center gap-3 p-3"}`}>
+        <div className={`overflow-hidden rounded-app border border-border bg-surface-muted/55 ${collapsed ? "flex items-center justify-center p-2" : "flex items-center gap-3 p-3"}`}>
           <Avatar email={userEmail} />
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-text">{userEmail?.split("@")[0]}</p>
-              <p className="mt-0.5 truncate text-[11px] capitalize text-text-muted">{role} workspace</p>
+              <p className="mt-0.5 truncate text-[11px] capitalize text-text-muted">{role}</p>
             </div>
           )}
           {!collapsed && (
@@ -233,18 +233,17 @@ function NavGroups({ collapsed = false, groups, mobile = false }: { collapsed?: 
 
 function TopBar({ dark, onCommand, onLogout, onMenu, onTheme, onUser, pageTitle, role, userEmail, userOpen }: { dark: boolean; onCommand: () => void; onLogout: () => void; onMenu: () => void; onTheme: () => void; onUser: () => void; pageTitle: string; role?: Role; userEmail?: string; userOpen: boolean }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[72px] items-center gap-3 border-b border-border bg-surface/82 px-4 shadow-[0_8px_30px_rgb(15_23_42/0.035)] backdrop-blur-xl sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-border bg-surface/86 px-4 shadow-[0_8px_30px_rgb(15_23_42/0.035)] backdrop-blur-xl sm:px-6 lg:px-7">
       <button className="grid h-10 w-10 place-items-center rounded-control text-text-muted hover:bg-surface-muted lg:hidden" aria-label={copy.mobile.menu} onClick={onMenu}>
         <Menu className="h-5 w-5" />
       </button>
       <div className="hidden min-w-0 lg:block">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">Current workspace</p>
-        <p className="mt-1 truncate text-sm font-semibold text-text">{pageTitle}</p>
+        <p className="truncate text-sm font-semibold text-text">{pageTitle}</p>
       </div>
       <button className="pressable ml-auto flex h-10 w-full max-w-xl items-center gap-3 rounded-control border border-input bg-surface px-3 text-left text-sm text-text-muted shadow-sm transition-all hover:border-border-strong hover:bg-elevated hover:shadow-soft sm:ml-4" onClick={onCommand}>
         <Search className="h-4 w-4" aria-hidden="true" />
         <span className="truncate">{copy.command.searchAnything}</span>
-        <kbd className="ml-auto hidden rounded-md border border-border bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-text-muted md:inline">⌘ K</kbd>
+        <kbd className="ml-auto hidden rounded-md border border-border bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-text-muted md:inline">{copy.command.shortcut}</kbd>
       </button>
       <button className="pressable grid h-10 w-10 shrink-0 place-items-center rounded-control text-text-muted hover:bg-surface-muted hover:text-text" aria-label={copy.shell.toggleTheme} onClick={onTheme}>
         {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
@@ -286,7 +285,7 @@ function MobileNavigation({ groups, onClose, onLogout }: { groups: NavGroup[]; o
     <div className="fixed inset-0 z-50 lg:hidden">
       <button className="absolute inset-0 bg-text/35 backdrop-blur-[2px]" aria-label={copy.mobile.closeMenu} onClick={onClose} />
       <aside className="relative flex h-full w-[320px] max-w-[88vw] flex-col border-r border-border bg-surface shadow-overlay">
-        <div className="flex h-[72px] items-center justify-between border-b border-border px-4">
+        <div className="flex h-[64px] items-center justify-between border-b border-border px-4">
           <BrandMark />
           <button className="grid h-10 w-10 place-items-center rounded-control text-text-muted hover:bg-surface-muted" aria-label={copy.mobile.closeMenu} onClick={onClose}>
             <X className="h-5 w-5" />
@@ -318,7 +317,7 @@ function CommandPalette({ items, onClose, onNavigate }: { items: NavItem[]; onCl
         <div className="max-h-[420px] overflow-y-auto p-2">
           {query.trim().length >= 3 && (
             <button className="mb-1 flex h-11 w-full items-center gap-3 rounded-control bg-brand-soft px-3 text-left text-sm font-medium text-brand-strong" onClick={() => onNavigate(`/search?q=${encodeURIComponent(query.trim())}`)}>
-              <Search className="h-4 w-4" />Search for “{query.trim()}”
+              <Search className="h-4 w-4" />Search for "{query.trim()}"
             </button>
           )}
           <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">Navigate</p>

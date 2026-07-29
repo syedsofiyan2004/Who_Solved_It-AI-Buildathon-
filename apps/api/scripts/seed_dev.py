@@ -211,6 +211,18 @@ BLUEPRINTS = [
     ("postgres-autovacuum-wraparound", "software", "PostgreSQL blocks writes during maintenance window", "database is not accepting commands to avoid wraparound data loss", "Autovacuum was disabled on a high-churn table and transaction IDs approached the safety limit.", ["Identify tables closest to wraparound.", "Run a controlled vacuum freeze.", "Re-enable autovacuum with table-specific thresholds."], ["PostgreSQL", "SRE"], "SELECT relname, age(relfrozenxid) FROM pg_class ORDER BY age(relfrozenxid) DESC LIMIT 20;"),
     ("airflow-xcom-bloat", "data", "Airflow scheduler slows after model evaluation DAG", "metadata database timeout", "Tasks stored large evaluation payloads in XCom instead of object storage.", ["Find oversized XCom rows.", "Store payloads in durable object storage.", "Keep only small references in metadata."], ["Airflow", "PostgreSQL", "Python"], "SELECT dag_id, octet_length(value) FROM xcom ORDER BY octet_length(value) DESC LIMIT 20;"),
     ("spark-small-files", "data", "Spark job slows after CDC ingestion cutover", "Listing file status took longer than expected", "The CDC pipeline created thousands of small files per partition.", ["Measure file count and average file size.", "Compact partitions with a controlled job.", "Tune the ingestion writer to target larger files."], ["Spark", "S3", "Python"], "aws s3 ls s3://<bucket>/<prefix>/ --recursive | wc -l"),
+    ("iam-session-tag-deny", "cloud", "Assumed role is denied because session tags are missing", "AccessDenied: principal tag condition failed", "The destination account policy required a project session tag, but the deployment workflow did not pass transitive tags.", ["Inspect CloudTrail for the evaluated principal tags.", "Pass only the approved session tags from the identity broker.", "Retest the same action with IAM policy simulation."], ["AWS", "IAM", "Security"], "aws sts assume-role --role-arn <role> --role-session-name <session> --tags Key=project,Value=<project>"),
+    ("eks-webhook-timeout", "cloud", "Kubernetes deployment hangs on admission webhook", "failed calling webhook: context deadline exceeded", "The validating webhook service had no ready endpoints after a namespace label change.", ["List webhook configurations and service endpoints.", "Restore the webhook backing deployment.", "Add a failure-policy decision and readiness alert."], ["Kubernetes", "EKS", "Security"], "kubectl get validatingwebhookconfigurations && kubectl get endpoints -A"),
+    ("helm-crd-order", "cloud", "Helm release fails while installing custom resources", "no matches for kind in version", "The chart applied custom resources before the matching CRD was established in the API server.", ["Install or upgrade CRDs before dependent resources.", "Wait for CRD establishment.", "Split CRD lifecycle from application release when required."], ["Helm", "Kubernetes"], "kubectl wait --for condition=established crd/<name> --timeout=60s"),
+    ("postgres-plan-regression", "software", "API latency spikes after statistics reset", "query exceeded statement timeout", "The planner selected a sequential scan after table statistics became stale during bulk loading.", ["Compare actual and estimated row counts.", "Run analyze on the affected table.", "Add a post-load statistics refresh to the runbook."], ["PostgreSQL", "FastAPI"], "EXPLAIN (ANALYZE, BUFFERS) SELECT ..."),
+    ("nginx-header-size", "software", "Authenticated API calls fail behind Nginx", "upstream sent too big header", "The identity response added group claims that exceeded the proxy header buffer.", ["Confirm the response header size at the proxy.", "Reduce unnecessary claims or tune approved header buffers.", "Retest login and refresh-token paths."], ["Nginx", "OIDC", "FastAPI"], "nginx -T | grep proxy_buffer"),
+    ("kafka-offset-reset", "data", "Kafka consumer reprocesses a completed topic partition", "OffsetOutOfRangeException", "Retention removed the committed offset before the paused consumer resumed.", ["Check committed offsets against earliest available offsets.", "Restore from the approved checkpoint when possible.", "Set lag and retention alerts for paused consumers."], ["Kafka", "Prometheus"], "kafka-consumer-groups --bootstrap-server <broker> --describe --group <group>"),
+    ("spark-skew-join", "data", "Spark executor repeatedly fails on one partition", "Container killed by YARN for exceeding memory limits", "A skewed join key concentrated most records into one shuffle partition.", ["Inspect partition-size distribution.", "Apply salting or skew join handling for the hot key.", "Validate shuffle spill and task retry counts."], ["Spark", "Python"], "spark.sql.adaptive.skewJoin.enabled=true"),
+    ("opentelemetry-exporter-backpressure", "sre", "API latency rises when trace exporter slows", "export queue is full", "The synchronous telemetry exporter blocked request handling when the collector endpoint was saturated.", ["Inspect exporter queue metrics.", "Move export to bounded asynchronous processing.", "Drop or sample telemetry before it affects user traffic."], ["OpenTelemetry", "FastAPI", "SRE"], "otelcol_exporter_queue_size"),
+    ("vault-agent-template-stale", "sre", "Application keeps using a rotated database password", "password authentication failed for user", "Vault Agent rendered the new secret file but the application never reloaded its connection pool.", ["Check rendered secret timestamps.", "Trigger the approved reload path after rotation.", "Verify new database sessions use the rotated credential."], ["Vault", "PostgreSQL", "Security"], "vault read database/creds/<role>"),
+    ("rag-chunk-boundary-miss", "ai", "Search misses a solution when the exact error is split across chunks", "exact phrase not found in retrieved context", "The ingestion job split stack traces without preserving overlapping error fragments.", ["Inspect chunk boundaries for the source solution.", "Add bounded overlap around error-message regions.", "Re-embed and verify the evaluation query returns the source."], ["RAG", "Vector Search", "Python"], "chunker.split(text, overlap=ERROR_FRAGMENT_OVERLAP)"),
+    ("llm-rate-limit", "ai", "Summary generation fails during a high-volume review session", "429 Too Many Requests", "The generation adapter retried all requests immediately instead of applying bounded backoff.", ["Separate retrieval success from summary generation failure.", "Apply bounded exponential backoff with jitter.", "Return cited results even when summary generation is unavailable."], ["LLM", "FastAPI", "SRE"], "Retry-After: <seconds>"),
+    ("gpu-driver-mismatch", "ai", "GPU inference pod cannot start after node image update", "CUDA driver version is insufficient for CUDA runtime version", "The node driver stack was older than the container runtime expected.", ["Compare node driver, CUDA runtime, and framework versions.", "Schedule the workload on compatible GPU nodes.", "Pin the approved image/runtime combination."], ["CUDA", "Kubernetes", "AI"], "nvidia-smi && python -c \"import torch; print(torch.version.cuda)\""),
 ]
 
 ENVIRONMENTS = [
@@ -221,6 +233,17 @@ ENVIRONMENTS = [
     ("Pre-production", "eu-west-1", "preprod"),
     ("Production", "eu-west-1", "prod"),
     ("Disaster recovery", "ap-southeast-1", "dr"),
+]
+
+SERVICE_CONTEXTS = [
+    ("payments API", "release pipeline", "customer checkout path"),
+    ("claims ingestion", "batch processing window", "downstream reporting feed"),
+    ("analytics workspace", "model evaluation run", "data-science notebook users"),
+    ("platform gateway", "blue-green rollout", "internal service consumers"),
+    ("migration control plane", "cutover rehearsal", "cloud operations team"),
+    ("observability stack", "incident response room", "on-call engineers"),
+    ("knowledge service", "review workflow", "solution authors and reviewers"),
+    ("identity bridge", "login and token refresh path", "authenticated employees"),
 ]
 
 DOMAIN_TEAM = {"cloud": "cloud_engineering", "sre": "sreaas", "software": "software_engineering", "data": "software_engineering", "ai": "ai_engineering"}
@@ -358,8 +381,16 @@ def main() -> None:
                     visibility = VisibilityLevel.DEPARTMENT
                 elif index % 17 == 0:
                     visibility = VisibilityLevel.TEAM
-                problem = f"During the {environment_name.lower()} migration in {region}, the team observed: {title.lower()}. The issue was reproduced and documented as a reusable internal runbook."
-                symptoms = f"The workload showed {error}. Deployments or operations were blocked until the underlying {domain} configuration was corrected."
+                service_name, operation_name, affected_users = SERVICE_CONTEXTS[index % len(SERVICE_CONTEXTS)]
+                problem = (
+                    f"During the {operation_name} for the {service_name} in {environment_name.lower()} ({region}), "
+                    f"the team observed: {title.lower()}. The issue affected {affected_users} and was documented "
+                    "as a reusable internal runbook after the fix was verified."
+                )
+                symptoms = (
+                    f"The service reported `{error}`. The team confirmed the failure through logs, health checks, "
+                    f"or deployment events before correcting the underlying {domain} control."
+                )
                 environment = f"{environment_name} | {region} | Cloud migration wave {(index % 8) + 1}"
                 challenge = db.get(Challenge, challenge_id)
                 if challenge is None:
@@ -397,7 +428,10 @@ def main() -> None:
                     f"{step} ({environment_name} validation)." if not step.endswith(".") else f"{step[:-1]} ({environment_name} validation)."
                     for step in steps
                 ]
-                prevention = f"Added a pre-migration check, a rollback note, and ownership for the {', '.join(technologies[:2])} control."
+                prevention = (
+                    f"Added a pre-change check for {service_name}, an owner-reviewed rollback note, "
+                    f"and an alert or validation step covering the {', '.join(technologies[:2])} control."
+                )
                 if solution is None:
                     solution = Solution(
                         id=solution_id,

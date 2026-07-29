@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { BrainCircuit, CheckCircle2, ChevronLeft, ChevronRight, DatabaseZap, Filter, LockKeyhole, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Filter, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -13,7 +12,7 @@ import { Button } from "../components/ui/Button";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { StatePanel } from "../components/ui/StatePanel";
 import { copy } from "../content/uiCopy";
-import { getEmployeeProfile, listTechnologies, searchSolutions, type EmployeeProfile, type SearchResponse, type SearchResult } from "../services/api";
+import { getEmployeeProfile, listTechnologies, searchSolutions, type EmployeeProfile, type SearchResult } from "../services/api";
 
 type Sort = "relevance" | "newest";
 
@@ -147,7 +146,7 @@ export function SearchPage() {
 
             {resultQuery.isLoading && <LoadingSkeleton rows={5} />}
             {resultQuery.isError && <StatePanel kind="error" onRetry={() => void resultQuery.refetch()} />}
-            {response && <SearchIntelligence response={response} includeSummary={includeSummary} />}
+            {response && <SearchContextPanel response={response} query={query} selectedTechnologyValues={selectedTechnologyValues} />}
             {response && <SearchResults response={response} selectedSolutionId={selectedSolutionId} onPage={(nextPage) => setSearch({ page: String(nextPage), solution: undefined, solver: undefined })} onPreview={openSolution} onSolver={openSolver} />}
           </section>
 
@@ -183,46 +182,58 @@ function SearchFilters({ selectedTechnologyValues, sort, technologies, verifiedO
   );
 }
 
-function SearchIntelligence({ includeSummary, response }: { includeSummary: boolean; response: Awaited<ReturnType<typeof searchSolutions>> }) {
+function SearchContextPanel({ query, response, selectedTechnologyValues }: { query: string; response: Awaited<ReturnType<typeof searchSolutions>>; selectedTechnologyValues: string[] }) {
   const { data, meta } = response;
-  const summaryState = data.service_status.grounded_summary;
   const semanticReady = data.service_status.semantic_search === "available";
-  const steps: { icon: LucideIcon; label: string; body: string; state: "complete" | "pending" | "blocked" }[] = [
-    { icon: LockKeyhole, label: "Authorization first", body: "Only records visible to this employee can be ranked or summarized.", state: "complete" },
-    { icon: DatabaseZap, label: "Hybrid retrieval", body: semanticReady ? "Semantic, keyword, exact-error, technology, and verification signals are merged." : "Keyword and exact-error retrieval are active while semantic search is not configured.", state: semanticReady ? "complete" : "pending" },
-    { icon: ShieldCheck, label: "Confidence gate", body: data.no_answer ? "No record passed the eligibility threshold." : `${meta.total} authorized eligible ${meta.total === 1 ? "record" : "records"} passed the threshold.`, state: data.no_answer ? "blocked" : "complete" },
-    { icon: BrainCircuit, label: "Grounded summary", body: summaryCopy(summaryState, includeSummary), state: summaryState === "available" ? "complete" : includeSummary ? "pending" : "blocked" },
-  ];
+  const topReasons = Array.from(new Set(data.results.flatMap((result) => result.match_reasons))).slice(0, 4);
+  const queryHints = extractQueryHints(query, selectedTechnologyValues);
 
   return (
-    <section className="product-card mb-5 overflow-hidden rounded-[20px] p-4">
+    <section className="product-card mb-5 overflow-hidden rounded-[20px] p-4 sm:p-5">
       <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
-      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong"><BrainCircuit className="h-3.5 w-3.5" />Retrieval trace</span>
-          <p className="mt-1 text-sm text-text-muted">How this answer is assembled before any AI-generated summary is allowed.</p>
+      <div className="relative grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] xl:items-start">
+        <div className="min-w-0">
+          <span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong"><ShieldCheck className="h-3.5 w-3.5" />Search context</span>
+          <p className="mt-1 text-sm leading-6 text-text-muted">
+            {data.no_answer
+              ? "No available solution is strong enough to recommend. Try adding the exact error, service, or environment."
+              : `${meta.total} accessible ${meta.total === 1 ? "solution is" : "solutions are"} available for this search.`}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {queryHints.map((hint) => <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-muted" key={hint}>{hint}</span>)}
+            {queryHints.length === 0 && <span className="rounded-full border border-dashed border-border px-2.5 py-1 text-[11px] text-text-muted">Add a technology or error phrase for tighter matches</span>}
+          </div>
         </div>
-        <div className="grid flex-1 gap-2 sm:grid-cols-2 xl:max-w-4xl xl:grid-cols-4">
-          {steps.map((step) => <TraceStep key={step.label} {...step} />)}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <EvidenceTile label="Visible matches" value={String(meta.total)} body="Filtered by your access before results are shown." />
+          <EvidenceTile label="Shown now" value={String(data.results.length)} body="Current page of ranked solution records." />
+          <EvidenceTile label="Search coverage" value={semanticReady ? "Expanded" : "Exact"} body={semanticReady ? "Uses similarity and text evidence." : "Uses exact wording and documented errors."} />
         </div>
+        {topReasons.length > 0 && (
+          <div className="xl:col-span-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">Why these results appear</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {topReasons.map((reason) => <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-medium text-brand-strong" key={reason}>{reason}</span>)}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-function TraceStep({ body, icon: Icon, label, state }: { body: string; icon: LucideIcon; label: string; state: "complete" | "pending" | "blocked" }) {
-  const stateClass = state === "complete" ? "border-success/25 bg-success/5 text-success" : state === "pending" ? "border-info/25 bg-info/5 text-info" : "border-border bg-surface-muted text-text-muted";
-  return <div className={`rounded-app border px-3 py-3 ${stateClass}`}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span className="text-xs font-semibold text-text">{label}</span>{state === "complete" && <CheckCircle2 className="ml-auto h-3.5 w-3.5" />}</div><p className="mt-2 text-[11px] leading-5 text-text-muted">{body}</p></div>;
+function EvidenceTile({ body, label, value }: { body: string; label: string; value: string }) {
+  return <div className="rounded-app border border-border bg-surface/80 px-3 py-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">{label}</p><p className="mt-1 text-lg font-semibold tracking-[-0.03em] text-text">{value}</p><p className="mt-1 text-[11px] leading-5 text-text-muted">{body}</p></div>;
 }
 
-function summaryCopy(state: SearchResponse["service_status"]["grounded_summary"], includeSummary: boolean) {
-  if (!includeSummary) return "Not requested yet. Judges can trigger it for a reliable match.";
-  if (state === "available") return "Generated from globally top-ranked authorized solution records.";
-  if (state === "not_run_no_answer") return "Skipped because the confidence gate returned no answer.";
-  if (state === "unavailable") return "Provider unavailable; source results remain visible without fake output.";
-  if (state === "invalid_response") return "Rejected because the model response failed citation validation.";
-  if (state === "not_generated") return "Waiting for a reliable grounded response.";
-  return "Grounded generation has not started.";
+function extractQueryHints(query: string, selectedTechnologyValues: string[]) {
+  const errorTerms = query.match(/[A-Z][A-Za-z]+(?:Error|Exception|BackOff|Timeout|Denied|Exceeded|Failed|Mismatch)/g) ?? [];
+  const longTerms = query
+    .split(/[\s:|,;()[\]{}"']+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 5 && !/^(during|after|before|error|issue|failed)$/i.test(item))
+    .slice(0, 4);
+  return Array.from(new Set([...errorTerms, ...selectedTechnologyValues, ...longTerms])).slice(0, 6);
 }
 
 function SearchResults({ response, selectedSolutionId, onPreview, onSolver, onPage }: { response: Awaited<ReturnType<typeof searchSolutions>>; selectedSolutionId: string | null; onPreview: (result: SearchResult) => void; onSolver: (result: SearchResult) => void; onPage: (page: number) => void }) {
@@ -231,7 +242,7 @@ function SearchResults({ response, selectedSolutionId, onPreview, onSolver, onPa
   return <>
     {data.summary && <section className="product-card mb-5 overflow-hidden rounded-[20px] p-5"><div className="relative"><div className="flex items-center gap-2 text-brand-strong"><Sparkles className="h-4 w-4" /><h2 className="text-sm font-semibold">{copy.search.summary}</h2></div><p className="mt-3 text-sm leading-7 text-text">{data.summary}</p><div className="mt-4 flex flex-wrap gap-2"><span className="text-xs text-text-muted">{copy.search.sources}</span>{data.summary_citations.map((citation) => <code className="max-w-full truncate rounded-control border border-primary/15 bg-surface/75 px-2 py-1 text-[10px] text-text-muted" key={citation}>{citation}</code>)}</div></div></section>}
     {data.summary_error && <p className="mb-4 rounded-control border border-warning/25 bg-warning/5 px-3 py-2 text-sm text-warning">{data.summary_error}</p>}
-    {data.service_status.semantic_search === "not_available" && <p className="mb-4 text-xs text-text-muted">AI semantic search is not configured. Exact-error and keyword search remain available.</p>}
+    {data.service_status.semantic_search === "not_available" && <p className="mb-4 rounded-control border border-border bg-surface px-3 py-2 text-xs text-text-muted"><AlertCircle className="mr-1 inline h-3.5 w-3.5" />Search is using exact wording and documented error messages for this request.</p>}
     <div className="space-y-3">{data.results.map((result) => <SearchResultCard key={result.solution_id} result={result} selected={selectedSolutionId === result.challenge_id || selectedSolutionId === result.solution_id} onPreview={() => onPreview(result)} onSolver={() => onSolver(result)} />)}</div>
     <div className="product-card mt-6 flex items-center justify-between rounded-app px-3 py-2"><Button disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)}><ChevronLeft className="h-4 w-4" />{copy.search.previousPage}</Button><span className="text-xs text-text-muted">Page {meta.page}</span><Button disabled={!meta.has_next} onClick={() => onPage(meta.page + 1)}>{copy.search.nextPage}<ChevronRight className="h-4 w-4" /></Button></div>
   </>;

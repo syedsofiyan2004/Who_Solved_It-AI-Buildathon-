@@ -38,10 +38,12 @@ The latest complex-incident expansion was informed by public vendor guidance on 
 
 - 43 employee profiles
 - 54 technology records
-- 85 incident blueprints
+- 97 incident blueprints
 - 7 deployment environments per blueprint
-- 595 challenge/solution records
+- 679 challenge/solution records
 - deterministic review history and usefulness feedback
+- source-category metadata in `data/source_catalog.json`
+- aggregate corpus validation through `apps/api/scripts/check_seed_quality.py`
 
 The script is idempotent: running it again updates the same stable showcase entities rather than creating uncontrolled duplicates.
 
