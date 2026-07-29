@@ -189,25 +189,26 @@ export function AuthoringPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[22px] border border-border bg-surface p-5 shadow-soft sm:p-7">
+      <section className="product-card relative overflow-hidden rounded-[24px] p-5 sm:p-7">
         <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="subtle-grid pointer-events-none absolute inset-0 opacity-20" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl"><span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong"><Sparkles className="h-3.5 w-3.5" />Knowledge authoring</span><PageHeader title={copy.nav.submit} description={headerDescription ?? "Document the problem, the reasoning behind the fix, and the engineer who can help others apply it."} /></div>
-          <div className="w-full max-w-sm rounded-app border border-border bg-surface/75 p-4 backdrop-blur"><div className="flex items-center justify-between text-xs"><span className="font-medium text-text">Entry completeness</span><span className="font-semibold text-brand-strong">{completion}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-220" style={{ width: `${completion}%` }} /></div><p className="mt-2 text-[11px] text-text-muted">Complete the technical context before submitting for review.</p></div>
+          <div className="relative w-full max-w-sm rounded-app border border-border bg-surface/75 p-4 shadow-sm backdrop-blur"><div className="flex items-center justify-between text-xs"><span className="font-medium text-text">Entry completeness</span><span className="font-semibold text-brand-strong">{completion}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-220" style={{ width: `${completion}%` }} /></div><p className="mt-2 text-[11px] text-text-muted">Complete the technical context before submitting for review.</p></div>
         </div>
       </section>
       {hasSecretWarning && <Notice tone="warning" text={copy.submit.secretWarning} />}
       {error && <Notice tone="error" text={error} />}
       <div className="grid gap-6 xl:grid-cols-[230px_minmax(0,1fr)_260px]">
-        <aside className="h-fit rounded-[18px] border border-border bg-surface p-3 shadow-sm xl:sticky xl:top-[96px]">
+        <aside className="product-card h-fit rounded-[20px] p-3 xl:sticky xl:top-[96px]">
           <div className="px-3 pb-3"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">Sections</p><p className="mt-1 text-xs text-text-muted">Move between sections without losing your draft.</p></div>
           {steps.map((label, index) => (
-            <button className={`mb-1 flex min-h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm transition-colors ${index === step ? "bg-brand-soft font-semibold text-brand-strong" : "text-text-muted hover:bg-surface-muted hover:text-text"}`} key={label} onClick={() => setStep(index)}>
+            <button className={`pressable mb-1 flex min-h-11 w-full items-center gap-3 rounded-control px-3 text-left text-sm transition-colors ${index === step ? "bg-brand-soft font-semibold text-brand-strong shadow-sm" : "text-text-muted hover:bg-surface-muted hover:text-text"}`} key={label} onClick={() => setStep(index)}>
               <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] font-semibold ${index < step ? "border-primary bg-primary text-primary-foreground" : index === step ? "border-primary/30 bg-surface text-brand-strong" : "border-border bg-surface"}`}>{index < step ? <Check className="h-3.5 w-3.5" /> : index + 1}</span><span>{label}</span>
             </button>
           ))}
         </aside>
-        <form className="min-w-0 rounded-[20px] border border-border bg-surface p-5 shadow-sm sm:p-7" onSubmit={(event) => event.preventDefault()}>
+        <form className="product-card min-w-0 rounded-[22px] p-5 sm:p-7" onSubmit={(event) => event.preventDefault()}>
           <div className="mb-6 border-b border-border pb-5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Step {step + 1} of {steps.length}</p><h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-text">{steps[step]}</h2></div>
           {step === 0 && <Fields><TextInput label={copy.submit.titleLabel} required value={form.title} onChange={(title) => update("title", title)} /><TextArea label={copy.submit.problemLabel} value={form.problemDescription} onChange={(value) => update("problemDescription", value)} rows={6} /><TextArea label={copy.submit.environmentLabel} value={form.environment} onChange={(value) => update("environment", value)} rows={4} /><TextArea label={copy.submit.symptomsLabel} value={form.symptoms} onChange={(value) => update("symptoms", value)} rows={5} /><TextArea label={copy.submit.errorLabel} value={form.exactErrorMessage} onChange={(value) => update("exactErrorMessage", value)} rows={4} code /></Fields>}
           {step === 1 && <Fields><TextArea label={copy.submit.rootCauseLabel} value={form.rootCause} onChange={(value) => update("rootCause", value)} rows={7} /><fieldset><legend className="text-sm font-semibold">{copy.submit.technologiesLabel}</legend><div className="mt-3 flex max-h-64 flex-wrap gap-2 overflow-auto rounded-app border border-border bg-surface-muted/30 p-3">{technologies.data?.map((technology) => <label className="inline-flex min-h-9 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm" key={technology.id}><input checked={form.technologyIds.includes(technology.id)} onChange={() => toggleTechnology(technology.id)} type="checkbox" />{technology.name}</label>)}</div></fieldset><label className="block text-sm font-semibold" htmlFor="visibility">{copy.submit.visibilityLabel}<select className="mt-2 h-10 w-full rounded-control border border-border bg-surface px-2 text-sm" id="visibility" value={form.visibility} onChange={(event) => update("visibility", event.target.value as FormState["visibility"])}><option value="company">Company</option><option value="department">Department</option><option value="team">Team</option><option value="restricted">Restricted</option></select></label></Fields>}
@@ -219,8 +220,8 @@ export function AuthoringPage() {
           </div>
         </form>
         <aside className="h-fit space-y-4 xl:sticky xl:top-[96px]">
-          <section className="rounded-[18px] border border-border bg-surface p-4 shadow-sm"><div className="flex items-center gap-2 text-sm font-semibold"><Save className="h-4 w-4 text-brand-strong" />Draft status</div><p className="mt-3 text-sm text-text-muted">{saveMutation.isPending ? copy.submit.saving : dirty ? copy.submit.unsaved : form.id ? copy.submit.saved : "Not saved yet"}</p>{form.expectedUpdatedAt && <p className="mt-2 text-[10px] text-text-muted">Server version: {new Date(form.expectedUpdatedAt).toLocaleTimeString()}</p>}</section>
-          <section className="rounded-[18px] border border-border bg-surface p-4 shadow-sm"><div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-brand-strong" />Before you submit</div><ul className="mt-3 space-y-2 text-xs leading-5 text-text-muted"><CheckItem done={Boolean(form.problemDescription.trim())} text="Problem is clearly described" /><CheckItem done={Boolean(form.symptoms.trim())} text="Symptoms or error are captured" /><CheckItem done={Boolean(form.rootCause.trim())} text="Root cause is documented" /><CheckItem done={Boolean(form.resolutionSteps.trim())} text="Resolution steps are reusable" /><CheckItem done={!hasSecretWarning} text="No obvious secret is present" /></ul></section>
+          <section className="product-card rounded-[20px] p-4"><div className="relative flex items-center gap-2 text-sm font-semibold"><Save className="h-4 w-4 text-brand-strong" />Draft status</div><p className="relative mt-3 text-sm text-text-muted">{saveMutation.isPending ? copy.submit.saving : dirty ? copy.submit.unsaved : form.id ? copy.submit.saved : "Not saved yet"}</p>{form.expectedUpdatedAt && <p className="relative mt-2 text-[10px] text-text-muted">Server version: {new Date(form.expectedUpdatedAt).toLocaleTimeString()}</p>}</section>
+          <section className="product-card rounded-[20px] p-4"><div className="relative flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-brand-strong" />Before you submit</div><ul className="relative mt-3 space-y-2 text-xs leading-5 text-text-muted"><CheckItem done={Boolean(form.problemDescription.trim())} text="Problem is clearly described" /><CheckItem done={Boolean(form.symptoms.trim())} text="Symptoms or error are captured" /><CheckItem done={Boolean(form.rootCause.trim())} text="Root cause is documented" /><CheckItem done={Boolean(form.resolutionSteps.trim())} text="Resolution steps are reusable" /><CheckItem done={!hasSecretWarning} text="No obvious secret is present" /></ul></section>
         </aside>
       </div>
     </div>
@@ -289,11 +290,11 @@ function Fields({ children }: { children: ReactNode }) {
 }
 
 function TextInput({ label, value, onChange, required = false }: { label: string; value: string; required?: boolean; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-semibold">{label}<input className="mt-2 h-11 w-full rounded-app border border-input bg-surface px-3 text-sm text-text outline-none transition focus:border-accent focus:shadow-focus" required={required} value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+  return <label className="block text-sm font-semibold">{label}<input className="mt-2 h-11 w-full rounded-app border border-input bg-surface px-3 text-sm text-text outline-none transition-all duration-160 hover:border-border-strong focus:border-accent focus:shadow-focus" required={required} value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
 function TextArea({ label, value, onChange, rows, code = false }: { label: string; value: string; rows: number; code?: boolean; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-semibold">{label}<textarea className={`mt-2 w-full rounded-app border border-input bg-surface p-3.5 text-sm leading-6 text-text outline-none transition focus:border-accent focus:shadow-focus ${code ? "font-mono" : ""}`} rows={rows} value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+  return <label className="block text-sm font-semibold">{label}<textarea className={`mt-2 w-full rounded-app border border-input bg-surface p-3.5 text-sm leading-6 text-text outline-none transition-all duration-160 hover:border-border-strong focus:border-accent focus:shadow-focus ${code ? "font-mono" : ""}`} rows={rows} value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
 function Review({ form, canSubmit }: { form: FormState; canSubmit: boolean }) {
