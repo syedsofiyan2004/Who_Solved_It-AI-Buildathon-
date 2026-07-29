@@ -108,20 +108,20 @@ export function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <section className="product-card relative overflow-hidden rounded-[24px] p-5 sm:p-7">
+      <section className="workspace-surface relative overflow-hidden rounded-[26px] p-5 sm:p-7">
         <div className="absolute -right-20 -top-28 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
         <div className="subtle-grid pointer-events-none absolute inset-0 opacity-25" />
         <div className="relative max-w-4xl">
           <span className="inline-flex items-center gap-2 text-xs font-semibold text-brand-strong"><Sparkles className="h-3.5 w-3.5" />Knowledge search</span>
-          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">Search the fix your teams already trust</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">Describe the roadblock, paste the exact error, or narrow the search by technology. Open solutions and expert profiles without leaving this workspace.</p>
-          <form className="mt-6 flex flex-col gap-3 sm:flex-row" onSubmit={submit}>
+          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] sm:text-4xl">Find the verified fix and the expert behind it</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">Search by symptom, exact error, environment, or technology. Results stay tied to source runbooks and approved solver profiles.</p>
+          <form className="mt-7 flex flex-col gap-3 rounded-[18px] border border-border bg-surface p-2 shadow-[0_18px_48px_rgb(15_23_42/0.08)] sm:flex-row" onSubmit={submit}>
             <label className="sr-only" htmlFor="solution-search">{copy.search.title}</label>
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-text-muted" aria-hidden="true" />
-              <input className="h-12 w-full rounded-app border border-input bg-surface pl-11 pr-4 text-sm text-text shadow-sm outline-none transition-all duration-160 placeholder:text-text-muted hover:border-border-strong focus:border-accent focus:shadow-focus" id="solution-search" minLength={3} onChange={(event) => setInput(event.target.value)} placeholder={copy.search.placeholder} value={input} />
+              <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-text-muted" aria-hidden="true" />
+              <input className="h-[52px] w-full rounded-[14px] border border-transparent bg-surface pl-11 pr-4 text-sm text-text outline-none transition-all duration-160 placeholder:text-text-muted hover:bg-surface-muted/60 focus:border-accent focus:bg-surface focus:shadow-focus" id="solution-search" minLength={3} onChange={(event) => setInput(event.target.value)} placeholder={copy.search.placeholder} value={input} />
             </div>
-            <Button className="h-12 px-5" disabled={input.trim().length < 3} type="submit" variant="primary"><Search className="h-4 w-4" />{copy.action.search}</Button>
+            <Button className="h-[52px] px-5" disabled={input.trim().length < 3} type="submit" variant="primary"><Search className="h-4 w-4" />{copy.action.search}</Button>
           </form>
         </div>
       </section>
@@ -133,7 +133,7 @@ export function SearchPage() {
           <SearchFilters selectedTechnologyValues={selectedTechnologyValues} sort={sort} technologies={technologies.data ?? []} verifiedOnly={verifiedOnly} onClear={clear} onSort={(value) => setSearch({ sort: value === "newest" ? "newest" : undefined, page: undefined, solution: undefined, solver: undefined })} onTechnology={setTechnology} onVerified={(value) => setSearch({ verification: value ? "verified" : "all", verified: undefined, page: undefined, solution: undefined, solver: undefined })} />
 
           <section aria-live="polite" className="min-w-0">
-            <div className="product-card sticky top-[84px] z-10 mb-4 flex flex-col gap-3 rounded-app px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="workspace-surface sticky top-[76px] z-10 mb-4 flex flex-col gap-3 rounded-[18px] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-text" data-testid="applied-search-query">{copy.search.appliedQuery} <span className="font-normal text-text-muted">“{query}”</span></p>
                 <p className="mt-1 text-xs text-text-muted">{response ? `${response.meta.total} relevant solutions` : verifiedOnly ? copy.search.verifiedResults : copy.search.resultCount}</p>

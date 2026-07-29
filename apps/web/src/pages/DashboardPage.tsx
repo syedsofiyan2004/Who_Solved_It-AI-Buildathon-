@@ -30,30 +30,30 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="product-card relative overflow-hidden rounded-[24px] p-6 sm:p-8 lg:p-10">
-        <div className="subtle-grid pointer-events-none absolute inset-0 opacity-35" />
-        <div className="absolute -right-16 -top-28 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-info/10 blur-3xl" />
+      <section className="enterprise-shell relative overflow-hidden rounded-[28px] border border-slate-800 p-6 shadow-[0_28px_80px_rgb(2_6_23/0.28)] sm:p-8 lg:p-10">
+        <div className="subtle-grid pointer-events-none absolute inset-0 opacity-20" />
+        <div className="absolute -right-16 -top-28 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
         <div className="relative grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-strong"><Sparkles className="h-3.5 w-3.5" />Engineering knowledge, connected</span>
-            <h1 className="mt-5 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">{copy.dashboard.title}</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-text-muted">Search the technical fixes your teams have already verified, then connect directly with the engineer who solved the issue.</p>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100"><Sparkles className="h-3.5 w-3.5" />Engineering knowledge, connected</span>
+            <h1 className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{copy.dashboard.title}</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">Search verified fixes, understand what worked, and reach the engineer who already solved the problem.</p>
             <label className="sr-only" htmlFor="dashboard-search">{copy.search.title}</label>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-text-muted" aria-hidden="true" />
-                <input className="h-12 w-full rounded-app border border-input bg-surface/95 pl-11 pr-4 text-sm text-text shadow-sm outline-none transition-all duration-160 placeholder:text-text-muted hover:border-border-strong focus:border-accent focus:shadow-focus" id="dashboard-search" onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") search(); }} placeholder={copy.dashboard.searchHint} value={query} />
+                <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-slate-400" aria-hidden="true" />
+                <input className="h-[52px] w-full rounded-[16px] border border-white/10 bg-white/[0.08] pl-11 pr-4 text-sm text-white shadow-inner outline-none transition-all duration-160 placeholder:text-slate-400 hover:border-white/20 focus:border-blue-300 focus:bg-white/[0.12] focus:shadow-[0_0_0_4px_rgb(96_165_250/0.18)]" id="dashboard-search" onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") search(); }} placeholder={copy.dashboard.searchHint} value={query} />
               </div>
-              <Button className="h-12 px-5" variant="primary" onClick={search}>{copy.search.title}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Button>
+              <Button className="h-[52px] px-5" variant="primary" onClick={search}>{copy.search.title}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Button>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-text-muted">
-              {['ModuleNotFoundError', 'Terraform state lock', 'CrashLoopBackOff', 'AccessDenied'].map((item) => <button className="pressable rounded-full border border-border bg-surface/70 px-3 py-1.5 transition hover:border-border-strong hover:bg-elevated hover:text-text hover:shadow-sm" key={item} onClick={() => navigate(`/search?q=${encodeURIComponent(item)}`)}>{item}</button>)}
+            <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-300">
+              {['ModuleNotFoundError', 'Terraform state lock', 'CrashLoopBackOff', 'AccessDenied'].map((item) => <button className="pressable rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 transition hover:border-white/25 hover:bg-white/[0.12] hover:text-white" key={item} onClick={() => navigate(`/search?q=${encodeURIComponent(item)}`)}>{item}</button>)}
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-[20px] border border-border bg-elevated/88 p-4 shadow-soft backdrop-blur">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/20 via-primary to-info/40" />
-            <div className="flex items-center gap-3"><BrandMark compact /><div><p className="text-sm font-semibold">Workspace pulse</p><p className="mt-0.5 text-xs text-text-muted">Live from the local knowledge repository</p></div></div>
+          <div className="relative overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.07] p-4 shadow-[0_18px_50px_rgb(2_6_23/0.28)] backdrop-blur">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400/20 via-blue-400 to-cyan-300/40" />
+            <div className="flex items-center gap-3"><BrandMark compact /><div><p className="text-sm font-semibold text-white">Knowledge pulse</p><p className="mt-0.5 text-xs text-slate-400">Current repository coverage</p></div></div>
             <div className="mt-5 grid grid-cols-3 gap-2">
               <PulseMetric label="Verified" value={verifiedTotal} icon={<CheckCircle2 className="h-4 w-4" />} />
               <PulseMetric label="Drafts" value={draftTotal} icon={<FileClock className="h-4 w-4" />} />

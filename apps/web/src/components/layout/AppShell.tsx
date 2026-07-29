@@ -163,32 +163,32 @@ export function AppShell() {
 
 function DesktopSidebar({ collapsed, groups, onCollapse, onLogout, role, userEmail }: { collapsed: boolean; groups: NavGroup[]; onCollapse: () => void; onLogout: () => void; role?: Role; userEmail?: string }) {
   return (
-    <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-border bg-surface/90 shadow-[8px_0_40px_rgb(15_23_42/0.035)] backdrop-blur-xl transition-[width] duration-220 lg:flex lg:flex-col ${collapsed ? "w-[68px]" : "w-[240px]"}`}>
-      <div className={`flex h-[64px] items-center border-b border-border ${collapsed ? "justify-center px-3" : "px-3.5"}`}>
+    <aside className={`enterprise-shell fixed inset-y-0 left-0 z-30 hidden border-r border-slate-800 shadow-[12px_0_44px_rgb(2_6_23/0.20)] transition-[width] duration-220 lg:flex lg:flex-col ${collapsed ? "w-[68px]" : "w-[240px]"}`}>
+      <div className={`flex h-[64px] items-center border-b border-white/10 ${collapsed ? "justify-center px-3" : "px-3.5"}`}>
         <BrandMark compact={collapsed} />
         {!collapsed && (
-          <button className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-control text-text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={copy.shell.collapseNavigation} onClick={onCollapse}>
+          <button className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-control text-slate-400 transition-colors hover:bg-white/10 hover:text-white" aria-label={copy.shell.collapseNavigation} onClick={onCollapse}>
             <PanelLeftClose className="h-[18px] w-[18px]" />
           </button>
         )}
       </div>
       {collapsed && (
-        <button className="mx-auto mt-3 grid h-9 w-9 place-items-center rounded-control text-text-muted hover:bg-surface-muted hover:text-text" aria-label={copy.shell.expandNavigation} onClick={onCollapse}>
+        <button className="mx-auto mt-3 grid h-9 w-9 place-items-center rounded-control text-slate-400 hover:bg-white/10 hover:text-white" aria-label={copy.shell.expandNavigation} onClick={onCollapse}>
           <PanelLeftOpen className="h-[18px] w-[18px]" />
         </button>
       )}
       <NavGroups collapsed={collapsed} groups={groups} />
-      <div className="border-t border-border p-3">
-        <div className={`overflow-hidden rounded-app border border-border bg-surface-muted/55 ${collapsed ? "flex items-center justify-center p-2" : "flex items-center gap-3 p-3"}`}>
+      <div className="border-t border-white/10 p-3">
+        <div className={`overflow-hidden rounded-app border border-white/10 bg-white/[0.055] ${collapsed ? "flex items-center justify-center p-2" : "flex items-center gap-3 p-3"}`}>
           <Avatar email={userEmail} />
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-text">{userEmail?.split("@")[0]}</p>
-              <p className="mt-0.5 truncate text-[11px] capitalize text-text-muted">{role}</p>
+              <p className="truncate text-xs font-semibold text-white">{userEmail?.split("@")[0]}</p>
+              <p className="mt-0.5 truncate text-[11px] capitalize text-slate-400">{role}</p>
             </div>
           )}
           {!collapsed && (
-            <button className="grid h-8 w-8 place-items-center rounded-control text-text-muted hover:bg-surface hover:text-danger" aria-label={copy.action.signOut} onClick={onLogout}>
+            <button className="grid h-8 w-8 place-items-center rounded-control text-slate-400 hover:bg-white/10 hover:text-white" aria-label={copy.action.signOut} onClick={onLogout}>
               <LogOut className="h-4 w-4" />
             </button>
           )}
@@ -203,21 +203,21 @@ function NavGroups({ collapsed = false, groups, mobile = false }: { collapsed?: 
     <nav className={`flex-1 overflow-y-auto ${mobile ? "p-3" : collapsed ? "px-2 py-4" : "p-3"}`} aria-label={mobile ? copy.shell.mobileNavigation : copy.shell.primaryNavigation}>
       {groups.map((group) => (
         <div className="mb-5" key={group.label}>
-          {!collapsed && <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-text-muted">{group.label}</p>}
+          {!collapsed && <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{group.label}</p>}
           <div className="space-y-1">
             {group.items.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
-                  className={({ isActive }) => `group relative flex items-center overflow-hidden rounded-control text-sm font-medium transition-all duration-160 ${mobile ? "h-11 px-3" : "h-10"} ${isActive ? "bg-brand-soft text-brand-strong shadow-sm" : "text-text-muted hover:bg-surface-muted hover:text-text"} ${collapsed ? "justify-center px-0" : "gap-3 px-3"}`}
+                  className={({ isActive }) => `group relative flex items-center overflow-hidden rounded-control text-sm font-medium transition-all duration-160 ${mobile ? "h-11 px-3" : "h-10"} ${mobile ? isActive ? "bg-brand-soft text-brand-strong shadow-sm" : "text-text-muted hover:bg-surface-muted hover:text-text" : isActive ? "bg-white text-slate-950 shadow-[0_10px_24px_rgb(2_6_23/0.22)]" : "text-slate-400 hover:bg-white/10 hover:text-white"} ${collapsed ? "justify-center px-0" : "gap-3 px-3"}`}
                   key={item.to}
                   to={item.to}
                   title={collapsed ? item.label : undefined}
                 >
                   {({ isActive }) => (
                     <>
-                      {isActive && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />}
-                      <Icon className={`h-[17px] w-[17px] shrink-0 transition-transform duration-160 group-hover:scale-110 ${isActive ? "text-brand-strong" : ""}`} aria-hidden="true" />
+                      {isActive && <span className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full ${mobile ? "bg-primary" : "bg-blue-500"}`} />}
+                      <Icon className={`h-[17px] w-[17px] shrink-0 transition-transform duration-160 group-hover:scale-110 ${isActive && mobile ? "text-brand-strong" : ""}`} aria-hidden="true" />
                       {!collapsed && <span className="truncate">{item.label}</span>}
                     </>
                   )}
@@ -233,7 +233,7 @@ function NavGroups({ collapsed = false, groups, mobile = false }: { collapsed?: 
 
 function TopBar({ dark, onCommand, onLogout, onMenu, onTheme, onUser, pageTitle, role, userEmail, userOpen }: { dark: boolean; onCommand: () => void; onLogout: () => void; onMenu: () => void; onTheme: () => void; onUser: () => void; pageTitle: string; role?: Role; userEmail?: string; userOpen: boolean }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-border bg-surface/86 px-4 shadow-[0_8px_30px_rgb(15_23_42/0.035)] backdrop-blur-xl sm:px-6 lg:px-7">
+    <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-border bg-surface/92 px-4 shadow-[0_10px_30px_rgb(15_23_42/0.045)] backdrop-blur-xl sm:px-6 lg:px-7">
       <button className="grid h-10 w-10 place-items-center rounded-control text-text-muted hover:bg-surface-muted lg:hidden" aria-label={copy.mobile.menu} onClick={onMenu}>
         <Menu className="h-5 w-5" />
       </button>
