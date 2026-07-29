@@ -20,7 +20,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../auth/AuthProvider";
 import { copy } from "../../content/uiCopy";
@@ -163,7 +163,7 @@ export function AppShell() {
 
 function DesktopSidebar({ collapsed, groups, onCollapse, onLogout, role, userEmail }: { collapsed: boolean; groups: NavGroup[]; onCollapse: () => void; onLogout: () => void; role?: Role; userEmail?: string }) {
   return (
-    <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-border bg-surface/95 backdrop-blur-xl transition-[width] duration-220 lg:flex lg:flex-col ${collapsed ? "w-[76px]" : "w-[264px]"}`}>
+    <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-border bg-surface/90 shadow-[8px_0_40px_rgb(15_23_42/0.035)] backdrop-blur-xl transition-[width] duration-220 lg:flex lg:flex-col ${collapsed ? "w-[76px]" : "w-[264px]"}`}>
       <div className={`flex h-[72px] items-center border-b border-border ${collapsed ? "justify-center px-3" : "px-4"}`}>
         <BrandMark compact={collapsed} />
         {!collapsed && (
@@ -179,12 +179,12 @@ function DesktopSidebar({ collapsed, groups, onCollapse, onLogout, role, userEma
       )}
       <NavGroups collapsed={collapsed} groups={groups} />
       <div className="border-t border-border p-3">
-        <div className={`flex items-center rounded-app border border-border bg-surface-muted/55 ${collapsed ? "justify-center p-2" : "gap-3 p-3"}`}>
+        <div className={`product-card overflow-hidden rounded-app ${collapsed ? "flex items-center justify-center p-2" : "flex items-center gap-3 p-3"}`}>
           <Avatar email={userEmail} />
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-text">{userEmail?.split("@")[0]}</p>
-              <p className="mt-0.5 truncate text-[11px] capitalize text-text-muted">{role}</p>
+              <p className="mt-0.5 truncate text-[11px] capitalize text-text-muted">{role} workspace</p>
             </div>
           )}
           {!collapsed && (
@@ -209,13 +209,18 @@ function NavGroups({ collapsed = false, groups, mobile = false }: { collapsed?: 
               const Icon = item.icon;
               return (
                 <NavLink
-                  className={({ isActive }) => `group relative flex items-center rounded-control text-sm font-medium transition-all duration-160 ${mobile ? "h-11 px-3" : "h-10"} ${isActive ? "bg-brand-soft text-brand-strong" : "text-text-muted hover:bg-surface-muted hover:text-text"} ${collapsed ? "justify-center px-0" : "gap-3 px-3"}`}
+                  className={({ isActive }) => `group relative flex items-center overflow-hidden rounded-control text-sm font-medium transition-all duration-160 ${mobile ? "h-11 px-3" : "h-10"} ${isActive ? "bg-brand-soft text-brand-strong shadow-sm" : "text-text-muted hover:bg-surface-muted hover:text-text"} ${collapsed ? "justify-center px-0" : "gap-3 px-3"}`}
                   key={item.to}
                   to={item.to}
                   title={collapsed ? item.label : undefined}
                 >
-                  <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden="true" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />}
+                      <Icon className={`h-[17px] w-[17px] shrink-0 transition-transform duration-160 group-hover:scale-110 ${isActive ? "text-brand-strong" : ""}`} aria-hidden="true" />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </>
+                  )}
                 </NavLink>
               );
             })}
@@ -228,33 +233,36 @@ function NavGroups({ collapsed = false, groups, mobile = false }: { collapsed?: 
 
 function TopBar({ dark, onCommand, onLogout, onMenu, onTheme, onUser, pageTitle, role, userEmail, userOpen }: { dark: boolean; onCommand: () => void; onLogout: () => void; onMenu: () => void; onTheme: () => void; onUser: () => void; pageTitle: string; role?: Role; userEmail?: string; userOpen: boolean }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[72px] items-center gap-3 border-b border-border bg-surface/88 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-20 flex h-[72px] items-center gap-3 border-b border-border bg-surface/82 px-4 shadow-[0_8px_30px_rgb(15_23_42/0.035)] backdrop-blur-xl sm:px-6 lg:px-8">
       <button className="grid h-10 w-10 place-items-center rounded-control text-text-muted hover:bg-surface-muted lg:hidden" aria-label={copy.mobile.menu} onClick={onMenu}>
         <Menu className="h-5 w-5" />
       </button>
       <div className="hidden min-w-0 lg:block">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">Workspace</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">Current workspace</p>
         <p className="mt-1 truncate text-sm font-semibold text-text">{pageTitle}</p>
       </div>
-      <button className="ml-auto flex h-10 w-full max-w-xl items-center gap-3 rounded-control border border-input bg-surface px-3 text-left text-sm text-text-muted shadow-sm transition-all hover:border-border-strong hover:shadow-soft sm:ml-4" onClick={onCommand}>
+      <button className="pressable ml-auto flex h-10 w-full max-w-xl items-center gap-3 rounded-control border border-input bg-surface px-3 text-left text-sm text-text-muted shadow-sm transition-all hover:border-border-strong hover:bg-elevated hover:shadow-soft sm:ml-4" onClick={onCommand}>
         <Search className="h-4 w-4" aria-hidden="true" />
         <span className="truncate">{copy.command.searchAnything}</span>
         <kbd className="ml-auto hidden rounded-md border border-border bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-text-muted md:inline">⌘ K</kbd>
       </button>
-      <button className="grid h-10 w-10 shrink-0 place-items-center rounded-control text-text-muted hover:bg-surface-muted" aria-label={copy.shell.toggleTheme} onClick={onTheme}>
+      <button className="pressable grid h-10 w-10 shrink-0 place-items-center rounded-control text-text-muted hover:bg-surface-muted hover:text-text" aria-label={copy.shell.toggleTheme} onClick={onTheme}>
         {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
       </button>
       <div className="relative">
-        <button className="flex h-10 items-center gap-2 rounded-control border border-border bg-surface px-2 hover:bg-surface-muted" aria-label={copy.shell.openUserMenu} onClick={onUser}>
+        <button className="pressable flex h-10 items-center gap-2 rounded-control border border-border bg-surface px-2 shadow-sm hover:border-border-strong hover:bg-surface-muted" aria-label={copy.shell.openUserMenu} onClick={onUser}>
           <Avatar email={userEmail} small />
           <ChevronDown className="hidden h-3.5 w-3.5 text-text-muted sm:block" />
         </button>
         {userOpen && (
-          <div className="absolute right-0 top-12 w-64 rounded-dialog border border-border bg-elevated p-2 shadow-overlay">
+          <div className="product-card absolute right-0 top-12 z-30 w-72 overflow-hidden rounded-dialog p-2 shadow-overlay">
             <div className="border-b border-border px-3 py-3">
               <p className="truncate text-sm font-semibold">{userEmail}</p>
               <p className="mt-1 text-xs capitalize text-text-muted">{role}</p>
             </div>
+            <Link className="mt-2 flex h-10 w-full items-center gap-2 rounded-control px-3 text-sm text-text-muted hover:bg-surface-muted hover:text-text" to="/people/me" onClick={onUser}>
+              <UserRound className="h-4 w-4" />Open profile
+            </Link>
             <button className="mt-1 flex h-10 w-full items-center gap-2 rounded-control px-3 text-sm text-text-muted hover:bg-surface-muted hover:text-danger" onClick={onLogout}>
               <LogOut className="h-4 w-4" />{copy.action.signOut}
             </button>
@@ -301,11 +309,11 @@ function CommandPalette({ items, onClose, onNavigate }: { items: NavItem[]; onCl
   }
   return (
     <div className="fixed inset-0 z-50 grid place-items-start bg-text/35 px-4 pt-[12vh] backdrop-blur-[3px]" role="presentation" onMouseDown={onClose}>
-      <section className="w-full max-w-2xl overflow-hidden rounded-dialog border border-border bg-elevated shadow-overlay" aria-label={copy.command.title} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+      <section className="product-card w-full max-w-2xl overflow-hidden rounded-dialog shadow-overlay" aria-label={copy.command.title} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
         <form className="flex items-center gap-3 border-b border-border px-4" onSubmit={submit}>
           <Command className="h-5 w-5 text-brand-strong" aria-hidden="true" />
           <input autoFocus className="h-14 w-full bg-transparent text-sm outline-none placeholder:text-text-muted" onChange={(event) => setQuery(event.target.value)} placeholder={copy.command.hint} value={query} />
-          <button className="grid h-9 w-9 place-items-center rounded-control text-text-muted hover:bg-surface-muted" aria-label={copy.action.close} onClick={onClose} type="button"><X className="h-4 w-4" /></button>
+          <button className="pressable grid h-9 w-9 place-items-center rounded-control text-text-muted hover:bg-surface-muted" aria-label={copy.action.close} onClick={onClose} type="button"><X className="h-4 w-4" /></button>
         </form>
         <div className="max-h-[420px] overflow-y-auto p-2">
           {query.trim().length >= 3 && (

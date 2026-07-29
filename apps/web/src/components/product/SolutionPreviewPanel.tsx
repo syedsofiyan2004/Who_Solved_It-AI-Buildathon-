@@ -13,15 +13,18 @@ import { VerificationBadge } from "./VerificationBadge";
 export function SolutionPreviewPanel({ result, onClose, onSolver }: { result: SearchResult; onClose: () => void; onSolver: () => void }) {
   return (
     <div className="space-y-6">
-      <header className="border-b border-border pb-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <MatchStrength score={result.score} />
-          <VerificationBadge verified={result.status === "verified"} date={result.updated_at} />
-        </div>
-        <h2 className="mt-4 text-xl font-semibold leading-7 tracking-[-0.025em] text-text">{result.title}</h2>
-        <p className="mt-2 text-sm leading-6 text-text-muted">{result.problem_excerpt}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {result.match_reasons.slice(0, 3).map((reason) => <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-medium text-brand-strong" key={reason}>{reason}</span>)}
+      <header className="relative overflow-hidden rounded-[18px] border border-border bg-surface-muted/55 p-4">
+        <div className="absolute -right-12 -top-16 h-36 w-36 rounded-full bg-primary/10 blur-2xl" />
+        <div className="relative">
+          <div className="flex flex-wrap items-center gap-2">
+            <MatchStrength score={result.score} />
+            <VerificationBadge verified={result.status === "verified"} date={result.updated_at} />
+          </div>
+          <h2 className="mt-4 text-xl font-semibold leading-7 tracking-[-0.025em] text-text">{result.title}</h2>
+          <p className="mt-2 text-sm leading-6 text-text-muted">{result.problem_excerpt}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {result.match_reasons.slice(0, 3).map((reason) => <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-medium text-brand-strong" key={reason}>{reason}</span>)}
+          </div>
         </div>
       </header>
 
@@ -47,12 +50,14 @@ export function SolutionPreviewPanel({ result, onClose, onSolver }: { result: Se
         </div>
       </section>
 
-      <section className="rounded-[16px] border border-border bg-surface-muted/55 p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold">{copy.detail.solverProfile}</h3>
-          <button className="text-xs font-medium text-brand-strong hover:underline" onClick={onSolver} type="button">View expertise</button>
+      <section className="product-card rounded-[18px] p-4">
+        <div className="relative">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold">{copy.detail.solverProfile}</h3>
+            <button className="text-xs font-medium text-brand-strong hover:underline" onClick={onSolver} type="button">View expertise</button>
+          </div>
+          <SolverMiniProfile solver={result.solver} onOpen={onSolver} />
         </div>
-        <SolverMiniProfile solver={result.solver} onOpen={onSolver} />
       </section>
 
       <div className="sticky bottom-0 -mx-5 flex flex-wrap gap-2 border-t border-border bg-elevated/95 px-5 pb-1 pt-4 backdrop-blur-xl">

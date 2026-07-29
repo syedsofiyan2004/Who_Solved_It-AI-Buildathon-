@@ -10,11 +10,11 @@ import { VerificationBadge } from "./VerificationBadge";
 
 export function SearchResultCard({ result, selected, onPreview, onSolver }: { result: SearchResult; selected?: boolean; onPreview: () => void; onSolver: () => void }) {
   return (
-    <article className={`group relative overflow-hidden rounded-[18px] border bg-card text-card-foreground shadow-sm transition-all duration-160 hover:-translate-y-px hover:border-border-strong hover:shadow-soft ${selected ? "border-primary/55 ring-4 ring-primary/5" : "border-border"}`}>
+    <article className={`product-card interactive-lift group relative overflow-hidden rounded-[20px] text-card-foreground ${selected ? "border-primary/55 ring-4 ring-primary/8" : ""}`}>
       <div className={`absolute inset-y-0 left-0 w-1 transition-colors ${selected ? "bg-primary" : "bg-transparent group-hover:bg-primary/45"}`} />
-      <div className="p-5 sm:p-6">
+      <div className="relative p-5 sm:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <button className="min-w-0 flex-1 text-left" onClick={onPreview} type="button">
+          <button className="min-w-0 flex-1 rounded-control text-left outline-none transition focus-visible:shadow-focus" onClick={onPreview} type="button">
             <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
               <ScanSearch className="h-3.5 w-3.5 text-brand-strong" aria-hidden="true" />
               Previous solution
@@ -28,14 +28,14 @@ export function SearchResultCard({ result, selected, onPreview, onSolver }: { re
           </div>
         </div>
 
-        <div className="mt-5 rounded-app border border-border/80 bg-surface-muted/70 px-4 py-3.5">
+        <div className="mt-5 rounded-app border border-border/80 bg-surface-muted/70 px-4 py-3.5 transition-colors group-hover:bg-surface-muted">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">{copy.search.matchedPassage}</p>
           <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-text">{result.root_cause_excerpt || result.problem_excerpt}</p>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {result.technologies.map((technology) => (
-            <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-muted" key={technology}>{technology}</span>
+            <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-muted transition group-hover:border-border-strong" key={technology}>{technology}</span>
           ))}
           {result.match_reasons.slice(0, 3).map((reason) => (
             <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-medium text-brand-strong" key={reason}>{reason}</span>
@@ -46,13 +46,13 @@ export function SearchResultCard({ result, selected, onPreview, onSolver }: { re
           <SolverMiniProfile solver={result.solver} compact onOpen={onSolver} />
           <div className="flex flex-wrap gap-2">
             {result.solver.contact_email && (
-              <a className="inline-flex h-9 items-center justify-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-muted" href={`mailto:${result.solver.contact_email}`}>
+              <a className="pressable inline-flex h-9 items-center justify-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-muted hover:shadow-sm" href={`mailto:${result.solver.contact_email}`}>
                 <Mail className="h-4 w-4" aria-hidden="true" />
                 {copy.action.contactSolver}
               </a>
             )}
             <Button onClick={onPreview}><Eye className="h-4 w-4" aria-hidden="true" />{copy.action.previewSolution}</Button>
-            <Link className="inline-flex h-9 items-center justify-center gap-2 rounded-control border border-primary/25 bg-brand-soft px-3 text-sm font-medium text-brand-strong transition-colors hover:border-primary/40 hover:bg-primary/10" to={`/solutions/${result.challenge_id}`}>
+            <Link className="pressable inline-flex h-9 items-center justify-center gap-2 rounded-control border border-primary/25 bg-brand-soft px-3 text-sm font-medium text-brand-strong transition-colors hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm" to={`/solutions/${result.challenge_id}`}>
               {copy.action.openFullSolution}
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </Link>
