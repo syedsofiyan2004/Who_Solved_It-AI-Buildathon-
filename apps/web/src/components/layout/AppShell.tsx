@@ -179,16 +179,22 @@ function DesktopSidebar({ collapsed, groups, onCollapse, onLogout, role, userEma
       )}
       <NavGroups collapsed={collapsed} groups={groups} />
       <div className="border-t border-white/10 p-3">
-        <div className={`overflow-hidden rounded-app border border-white/10 bg-white/[0.055] ${collapsed ? "flex items-center justify-center p-2" : "flex items-center gap-3 p-3"}`}>
-          <Avatar email={userEmail} />
+        <div className={`overflow-hidden rounded-app border border-white/10 bg-white/[0.055] ${collapsed ? "flex items-center justify-center p-2" : "flex items-center gap-2 p-2"}`}>
+          <Link
+            className={`pressable flex min-w-0 flex-1 items-center gap-3 rounded-control p-1 hover:bg-white/10 ${collapsed ? "justify-center" : ""}`}
+            title={copy.shell.openUserMenu}
+            to="/people/me"
+          >
+            <Avatar email={userEmail} />
+            {!collapsed && (
+              <div className="min-w-0 flex-1 text-left">
+                <p className="truncate text-xs font-semibold text-white">{userEmail?.split("@")[0]}</p>
+                <p className="mt-0.5 truncate text-[11px] capitalize text-slate-400">{role}</p>
+              </div>
+            )}
+          </Link>
           {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-white">{userEmail?.split("@")[0]}</p>
-              <p className="mt-0.5 truncate text-[11px] capitalize text-slate-400">{role}</p>
-            </div>
-          )}
-          {!collapsed && (
-            <button className="grid h-8 w-8 place-items-center rounded-control text-slate-400 hover:bg-white/10 hover:text-white" aria-label={copy.action.signOut} onClick={onLogout}>
+            <button className="grid h-8 w-8 shrink-0 place-items-center rounded-control text-slate-400 hover:bg-white/10 hover:text-white" aria-label={copy.action.signOut} onClick={onLogout}>
               <LogOut className="h-4 w-4" />
             </button>
           )}
@@ -216,7 +222,7 @@ function NavGroups({ collapsed = false, groups, mobile = false }: { collapsed?: 
                 >
                   {({ isActive }) => (
                     <>
-                      {isActive && <span className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full ${mobile ? "bg-primary" : "bg-blue-500"}`} />}
+                      {isActive && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />}
                       <Icon className={`h-[17px] w-[17px] shrink-0 transition-transform duration-160 group-hover:scale-110 ${isActive && mobile ? "text-brand-strong" : ""}`} aria-hidden="true" />
                       {!collapsed && <span className="truncate">{item.label}</span>}
                     </>
@@ -233,12 +239,12 @@ function NavGroups({ collapsed = false, groups, mobile = false }: { collapsed?: 
 
 function TopBar({ dark, onCommand, onLogout, onMenu, onTheme, onUser, pageTitle, role, userEmail, userOpen }: { dark: boolean; onCommand: () => void; onLogout: () => void; onMenu: () => void; onTheme: () => void; onUser: () => void; pageTitle: string; role?: Role; userEmail?: string; userOpen: boolean }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-border bg-surface/92 px-4 shadow-[0_10px_30px_rgb(15_23_42/0.045)] backdrop-blur-xl sm:px-6 lg:px-7">
+    <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-border bg-surface px-4 shadow-[0_10px_30px_rgb(15_23_42/0.045)] sm:px-6 lg:px-7">
       <button className="grid h-10 w-10 place-items-center rounded-control text-text-muted hover:bg-surface-muted lg:hidden" aria-label={copy.mobile.menu} onClick={onMenu}>
         <Menu className="h-5 w-5" />
       </button>
       <div className="hidden min-w-0 lg:block">
-        <p className="truncate text-sm font-semibold text-text">{pageTitle}</p>
+        <p className="truncate font-display text-sm font-semibold tracking-[-0.01em] text-text">{pageTitle}</p>
       </div>
       <button className="pressable ml-auto flex h-10 w-full max-w-xl items-center gap-3 rounded-control border border-input bg-surface px-3 text-left text-sm text-text-muted shadow-sm transition-all hover:border-border-strong hover:bg-elevated hover:shadow-soft sm:ml-4" onClick={onCommand}>
         <Search className="h-4 w-4" aria-hidden="true" />
@@ -254,18 +260,21 @@ function TopBar({ dark, onCommand, onLogout, onMenu, onTheme, onUser, pageTitle,
           <ChevronDown className="hidden h-3.5 w-3.5 text-text-muted sm:block" />
         </button>
         {userOpen && (
-          <div className="product-card absolute right-0 top-12 z-30 w-72 overflow-hidden rounded-dialog p-2 shadow-overlay">
-            <div className="border-b border-border px-3 py-3">
-              <p className="truncate text-sm font-semibold">{userEmail}</p>
-              <p className="mt-1 text-xs capitalize text-text-muted">{role}</p>
+          <>
+            <button aria-label={copy.action.close} className="fixed inset-0 z-20 cursor-default" onClick={onUser} tabIndex={-1} />
+            <div className="product-card absolute right-0 top-12 z-30 w-72 overflow-hidden rounded-dialog p-2 shadow-overlay">
+              <div className="border-b border-border px-3 py-3">
+                <p className="truncate text-sm font-semibold">{userEmail}</p>
+                <p className="mt-1 text-xs capitalize text-text-muted">{role}</p>
+              </div>
+              <Link className="mt-2 flex h-10 w-full items-center gap-2 rounded-control px-3 text-sm text-text-muted hover:bg-surface-muted hover:text-text" to="/people/me" onClick={onUser}>
+                <UserRound className="h-4 w-4" />Open profile
+              </Link>
+              <button className="mt-1 flex h-10 w-full items-center gap-2 rounded-control px-3 text-sm text-text-muted hover:bg-surface-muted hover:text-danger" onClick={onLogout}>
+                <LogOut className="h-4 w-4" />{copy.action.signOut}
+              </button>
             </div>
-            <Link className="mt-2 flex h-10 w-full items-center gap-2 rounded-control px-3 text-sm text-text-muted hover:bg-surface-muted hover:text-text" to="/people/me" onClick={onUser}>
-              <UserRound className="h-4 w-4" />Open profile
-            </Link>
-            <button className="mt-1 flex h-10 w-full items-center gap-2 rounded-control px-3 text-sm text-text-muted hover:bg-surface-muted hover:text-danger" onClick={onLogout}>
-              <LogOut className="h-4 w-4" />{copy.action.signOut}
-            </button>
-          </div>
+          </>
         )}
       </div>
     </header>
@@ -283,7 +292,7 @@ function Avatar({ email, small = false }: { email?: string; small?: boolean }) {
 function MobileNavigation({ groups, onClose, onLogout }: { groups: NavGroup[]; onClose: () => void; onLogout: () => void }) {
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <button className="absolute inset-0 bg-text/35 backdrop-blur-[2px]" aria-label={copy.mobile.closeMenu} onClick={onClose} />
+      <button className="absolute inset-0 bg-text/35" aria-label={copy.mobile.closeMenu} onClick={onClose} />
       <aside className="relative flex h-full w-[320px] max-w-[88vw] flex-col border-r border-border bg-surface shadow-overlay">
         <div className="flex h-[64px] items-center justify-between border-b border-border px-4">
           <BrandMark />
@@ -307,7 +316,7 @@ function CommandPalette({ items, onClose, onNavigate }: { items: NavItem[]; onCl
     if (trimmed.length >= 3) onNavigate(`/search?q=${encodeURIComponent(trimmed)}`);
   }
   return (
-    <div className="fixed inset-0 z-50 grid place-items-start bg-text/35 px-4 pt-[12vh] backdrop-blur-[3px]" role="presentation" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 grid place-items-start bg-text/35 px-4 pt-[12vh]" role="presentation" onMouseDown={onClose}>
       <section className="product-card w-full max-w-2xl overflow-hidden rounded-dialog shadow-overlay" aria-label={copy.command.title} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
         <form className="flex items-center gap-3 border-b border-border px-4" onSubmit={submit}>
           <Command className="h-5 w-5 text-brand-strong" aria-hidden="true" />

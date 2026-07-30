@@ -191,7 +191,7 @@ Those fields always come from PostgreSQL.
 | AI adapters | NVIDIA-hosted embedding and chat adapters | Embeddings and grounded summaries |
 | Local runtime | Docker Compose | PostgreSQL, API, and web services |
 
-The frontend is intentionally not the main design focus. The platform value is in structured knowledge capture, verification, authorization-aware retrieval, expert discovery, and grounded summarization.
+The frontend is a first-class product surface. The core value proposition - find the verified fix and the person who owns it - must be visible in seconds through the search flow, ledger-style result rows, grounded summaries, source citations, and solver ownership. UI polish is required for this hackathon build, not optional.
 
 ## Security and governance
 

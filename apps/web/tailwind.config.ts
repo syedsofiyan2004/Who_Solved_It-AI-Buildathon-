@@ -4,6 +4,11 @@ export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["\"Space Grotesk\"", "Inter", "ui-sans-serif", "sans-serif"],
+        mono: ["\"IBM Plex Mono\"", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"]
+      },
       colors: {
         background: "rgb(var(--color-background) / <alpha-value>)",
         foreground: "rgb(var(--color-foreground) / <alpha-value>)",

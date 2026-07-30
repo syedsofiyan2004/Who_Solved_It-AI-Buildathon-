@@ -23,7 +23,7 @@ export function ChallengeListPage({ status, title }: { status: string; title: st
                 <FileText className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
                 <span className="truncate font-medium">{item.title}</span>
               </span>
-              <span className="shrink-0 rounded-control border border-border px-2 py-1 text-xs text-text-muted">{item.status}</span>
+              <span className="status-chip shrink-0 rounded-control border border-border px-2 py-1 uppercase text-text-muted">{item.status.replace(/_/g, " ")}</span>
             </Link>
           ))}
         </div>

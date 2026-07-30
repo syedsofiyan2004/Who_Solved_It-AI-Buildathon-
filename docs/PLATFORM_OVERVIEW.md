@@ -33,7 +33,7 @@ The review build is built as a monorepo with these main parts:
 | AI adapters | Configurable NVIDIA or Amazon Bedrock adapters | Embeddings and grounded summaries |
 | Local runtime | Docker Compose | Runs PostgreSQL, API, and web locally |
 
-The frontend is intentionally not the center of the design. It is the product surface for the core workflows, while the important platform value sits in the repository model, authorization rules, retrieval pipeline, review workflow, and grounded answer generation.
+The frontend is a first-class product surface for the core workflows. The important platform value still sits in the repository model, authorization rules, retrieval pipeline, review workflow, and grounded answer generation, but leadership and hackathon judges experience that value through the search flow, ledger-style result rows, citations, review states, and solver profile handoff.
 
 ## Main features
 

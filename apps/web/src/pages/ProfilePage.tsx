@@ -48,19 +48,18 @@ export function ProfilePage() {
     <div className="space-y-5">
       <button className="pressable inline-flex items-center gap-2 rounded-control px-2 py-1 text-sm font-medium text-text-muted hover:bg-surface-muted hover:text-text" onClick={() => navigate(-1)} type="button"><ArrowLeft className="h-4 w-4" />Back to workspace</button>
 
-      <section className="product-card relative overflow-hidden rounded-[24px] p-6 sm:p-8">
-        <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+      <section className="product-card relative overflow-hidden rounded-[14px] p-6 sm:p-8">
         <div className="subtle-grid pointer-events-none absolute inset-0 opacity-20" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-5">
-            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-[22px] border border-primary/20 bg-brand-soft text-2xl font-semibold text-brand-strong shadow-sm">
+            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-[14px] border border-primary/20 bg-brand-soft font-data text-2xl font-semibold text-brand-strong shadow-sm">
               {item.avatar_key ? <UserRound className="h-8 w-8" aria-hidden="true" /> : item.initials}
             </div>
             <div className="min-w-0 pt-1">
-              <div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Employee profile</span><span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-1 text-[10px] font-semibold text-success"><BadgeCheck className="h-3 w-3" />Internal expert</span></div>
-              <h1 className="mt-2 break-words text-2xl font-semibold tracking-[-0.035em] text-text sm:text-3xl">{item.display_name}</h1>
+              <div className="flex flex-wrap items-center gap-2"><span className="font-data text-[10px] uppercase tracking-[0.14em] text-brand-strong">Employee profile</span><span className="status-chip inline-flex items-center gap-1 rounded-control bg-success/10 px-2 py-1 uppercase text-success"><BadgeCheck className="h-3 w-3" />Internal expert</span></div>
+              <h1 className="mt-2 break-words font-display text-2xl font-semibold tracking-[-0.015em] text-text sm:text-3xl">{item.display_name}</h1>
               <p className="mt-1 text-sm text-text-muted">{item.job_title}</p>
-              <p className="mt-2 text-xs text-text-muted">{item.team} · {item.department}</p>
+              <p className="mt-2 text-xs text-text-muted">{item.team} &middot; {item.department}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -74,8 +73,8 @@ export function ProfilePage() {
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-start">
         <aside className="space-y-4 xl:sticky xl:top-[96px]">
-          <section className="product-card rounded-[20px] p-5">
-            <h2 className="text-sm font-semibold">About</h2>
+          <section className="product-card rounded-[12px] p-5">
+            <h2 className="font-display text-sm font-semibold">About</h2>
             <p className="mt-3 text-sm leading-7 text-text-muted">{item.bio || `${item.display_name} contributes technical knowledge across ${item.team}.`}</p>
             <dl className="mt-5 space-y-4 border-t border-border pt-4 text-sm">
               <Meta label={copy.profile.department} value={item.department} />
@@ -90,16 +89,16 @@ export function ProfilePage() {
         </aside>
 
         <main className="min-w-0 space-y-5">
-          <section className="product-card rounded-[20px] p-5 sm:p-6">
+          <section className="product-card rounded-[12px] p-5 sm:p-6">
             <div className="grid gap-6 lg:grid-cols-2">
               <TagSection title={copy.profile.skills} empty={copy.profile.emptySkills} values={item.skills} accent />
               <TagSection title={copy.profile.technologies} empty={copy.profile.emptyTags} values={item.technologies} />
             </div>
           </section>
 
-          <section className="product-card rounded-[20px] p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Knowledge contributions</p><h2 className="mt-1 text-lg font-semibold tracking-[-0.02em]">{copy.profile.verifiedSolutions}</h2></div><span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong">{item.verified_solutions.length}</span></div>
-            {item.verified_solutions.length === 0 ? <p className="mt-5 rounded-app border border-dashed border-border bg-surface-muted/40 p-5 text-sm text-text-muted">{copy.profile.emptySolutions}</p> : <div className="mt-5 grid gap-3 lg:grid-cols-2">{item.verified_solutions.map((solution) => <Link className="group rounded-[16px] border border-border bg-surface p-4 transition-all hover:-translate-y-px hover:border-border-strong hover:shadow-soft" key={solution.solution_id} to={`/solutions/${solution.challenge_id}`}><div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold leading-6 text-text group-hover:text-brand-strong">{solution.title}</h3><ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" /></div><div className="mt-4 flex flex-wrap gap-2">{solution.technologies.map((technology) => <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-medium text-text-muted" key={technology}>{technology}</span>)}</div><div className="mt-4 flex items-center justify-between text-[10px] text-text-muted"><span className="capitalize">{solution.visibility}</span><span>{new Date(solution.updated_at).toLocaleDateString()}</span></div></Link>)}</div>}
+          <section className="product-card rounded-[12px] p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-data text-[10px] uppercase tracking-[0.14em] text-brand-strong">Knowledge contributions</p><h2 className="mt-1 font-display text-lg font-semibold tracking-[-0.01em]">{copy.profile.verifiedSolutions}</h2></div><span className="status-chip rounded-control bg-brand-soft px-2.5 py-1 text-brand-strong">{item.verified_solutions.length}</span></div>
+            {item.verified_solutions.length === 0 ? <p className="mt-5 rounded-[10px] border border-dashed border-border bg-surface-muted/40 p-5 text-sm text-text-muted">{copy.profile.emptySolutions}</p> : <div className="mt-5 grid gap-3 lg:grid-cols-2">{item.verified_solutions.map((solution) => <Link className="ledger-row group relative overflow-hidden rounded-[10px] p-4" key={solution.solution_id} to={`/solutions/${solution.challenge_id}`}><span className="ledger-rail bg-success" /><div className="flex items-start justify-between gap-3 pl-1"><h3 className="text-sm font-semibold leading-6 text-text group-hover:text-brand-strong">{solution.title}</h3><ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" /></div><div className="mt-4 flex flex-wrap gap-2 pl-1">{solution.technologies.map((technology) => <span className="rounded-control border border-border px-2.5 py-1 text-[10px] font-medium text-text-muted" key={technology}>{technology}</span>)}</div><div className="mt-4 flex items-center justify-between pl-1 font-data text-[10px] text-text-muted"><span className="uppercase">{solution.visibility}</span><span>{new Date(solution.updated_at).toLocaleDateString()}</span></div></Link>)}</div>}
           </section>
         </main>
       </div>
@@ -128,10 +127,10 @@ function ProfileEditor({ error, isSaving, onCancel, onSave, profile }: { error: 
   }
 
   return (
-    <form className="product-card rounded-[20px] p-5 sm:p-6" onSubmit={submit}>
+    <form className="product-card rounded-[12px] p-5 sm:p-6" onSubmit={submit}>
       <div className="flex flex-col gap-2 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold">{copy.action.editProfile}</h2>
+          <h2 className="font-display text-base font-semibold">{copy.action.editProfile}</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">{copy.profile.editHint}</p>
         </div>
         <div className="flex gap-2">
@@ -168,13 +167,13 @@ function TextField({ help, label, onChange, required = false, type = "text", val
 }
 
 function Meta({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">{label}</dt><dd className="mt-1 font-medium text-text">{value}</dd></div>;
+  return <div><dt className="font-data text-[10px] uppercase tracking-[0.12em] text-text-muted">{label}</dt><dd className="mt-1 font-medium text-text">{value}</dd></div>;
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
-  return <div className="product-card interactive-lift rounded-[16px] p-4"><p className="relative text-2xl font-semibold tracking-[-0.03em] text-text">{value}</p><p className="relative mt-1 text-[11px] text-text-muted">{label}</p></div>;
+  return <div className="product-card interactive-lift rounded-[10px] p-4"><p className="relative font-display text-2xl font-semibold tracking-[-0.01em] text-text">{value}</p><p className="relative mt-1 text-[11px] text-text-muted">{label}</p></div>;
 }
 
 function TagSection({ title, empty, values, accent = false }: { title: string; empty: string; values: string[]; accent?: boolean }) {
-  return <section><h2 className="text-sm font-semibold">{title}</h2>{values.length === 0 ? <p className="mt-3 text-sm text-text-muted">{empty}</p> : <div className="mt-3 flex flex-wrap gap-2">{values.map((value) => <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${accent ? "bg-brand-soft text-brand-strong" : "border border-border bg-surface text-text-muted"}`} key={value}>{value}</span>)}</div>}</section>;
+  return <section><h2 className="font-display text-sm font-semibold">{title}</h2>{values.length === 0 ? <p className="mt-3 text-sm text-text-muted">{empty}</p> : <div className="mt-3 flex flex-wrap gap-2">{values.map((value) => <span className={`rounded-control px-2.5 py-1 text-[11px] font-medium ${accent ? "bg-brand-soft text-brand-strong" : "border border-border bg-surface text-text-muted"}`} key={value}>{value}</span>)}</div>}</section>;
 }

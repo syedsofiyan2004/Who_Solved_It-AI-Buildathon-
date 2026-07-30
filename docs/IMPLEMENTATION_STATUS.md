@@ -2,7 +2,7 @@
 
 ## Current status
 
-**Final review build implemented.** The product is intentionally local-only for the zero-infrastructure-cost buildathon demonstration. Hosted deployment is not part of the final scope.
+**Final review build implemented with leadership-demo UI polish.** The product is intentionally local-only for the zero-infrastructure-cost buildathon demonstration. Hosted deployment is not part of the final scope.
 
 ## Working product areas
 
@@ -18,7 +18,8 @@
 | Reviewer workflow | Implemented | Queue, approve, request changes, reject, review history |
 | Solution detail | Implemented | Technical reading view, active verification, timeline, related solutions, feedback |
 | Connected product navigation | Implemented | Persistent shell and URL-preserved search/detail/solver state |
-| Light and dark themes | Implemented | Semantic color tokens across product surfaces |
+| Paper & Ledger product UI | Implemented | Warm paper/ink light theme, graphite dark theme, ledger-style result rows, bracket-style status chips, and source-grounded summary panel |
+| Light and dark themes | Implemented | Semantic color tokens across product surfaces with no glassmorphism dependency |
 | Responsive UI | Implemented | Desktop master-detail workspace and mobile detail sheets |
 | Showcase corpus | Implemented | 43 supplied employee profiles, 54 technologies, 97 incident blueprints, and 679 generated original synthetic technical records |
 | Local Docker setup | Implemented | React, FastAPI, PostgreSQL, pgvector |
@@ -53,9 +54,9 @@
 
 ## Latest validation
 
+- `docker compose exec -T api alembic upgrade head` passed.
 - `docker compose exec -T api ruff check .` passed.
 - `docker compose exec -T api pytest` passed: 47 tests.
-- `docker compose exec -T api alembic upgrade head` passed.
 - `docker compose exec -T api python scripts/seed_dev.py` passed and generated 679 synthetic records.
 - `docker compose exec -T api python scripts/check_seed_quality.py` passed.
 - `docker compose exec -T web npm run typecheck` passed.
@@ -64,3 +65,4 @@
 - `python apps\api\scripts\scan_secrets.py .` passed.
 - `python apps\api\scripts\package_source.py --output artifacts\knowledge-platform-source.zip` passed.
 - `python apps\api\scripts\verify_source_package.py --archive artifacts\knowledge-platform-source.zip` passed.
+- Browser visual smoke test passed for login and `http://localhost:5173/search?q=CrashLoopBackOff`: 10 ledger rows rendered, the grounded-summary action remained available as an explicit opt-in, no search error state appeared, no mojibake replacement characters appeared, and no `backdrop-blur` classes were present.

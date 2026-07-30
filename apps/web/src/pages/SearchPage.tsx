@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+﻿import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { AlertCircle, ChevronLeft, ChevronRight, Filter, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -29,6 +30,7 @@ export function SearchPage() {
   const selectedSolverId = params.get("solver");
   const selectedTechnologyValues = params.getAll("technology");
   const [input, setInput] = useState(query);
+  const reduceMotion = useReducedMotion();
   const validQuery = query.trim().length >= 3;
   const workspaceKey = useMemo(() => {
     const base = new URLSearchParams(params);
@@ -108,18 +110,17 @@ export function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <section className="workspace-surface relative overflow-hidden rounded-[26px] p-5 sm:p-7">
-        <div className="absolute -right-20 -top-28 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-        <div className="subtle-grid pointer-events-none absolute inset-0 opacity-25" />
+      <section className="workspace-surface relative overflow-hidden rounded-[18px] p-5 sm:p-7">
+        <div className="subtle-grid pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative max-w-4xl">
-          <span className="inline-flex items-center gap-2 text-xs font-semibold text-brand-strong"><Sparkles className="h-3.5 w-3.5" />Knowledge search</span>
-          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] sm:text-4xl">Find the verified fix and the expert behind it</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">Search by symptom, exact error, environment, or technology. Results stay tied to source runbooks and approved solver profiles.</p>
-          <form className="mt-7 flex flex-col gap-3 rounded-[18px] border border-border bg-surface p-2 shadow-[0_18px_48px_rgb(15_23_42/0.08)] sm:flex-row" onSubmit={submit}>
+          <span className="inline-flex items-center gap-2 font-data text-[11px] uppercase tracking-[0.14em] text-brand-strong"><Sparkles className="h-3.5 w-3.5" />Knowledge search</span>
+          <h1 className="mt-2 font-display text-2xl font-semibold tracking-[-0.02em] sm:text-4xl">Find the verified fix - and the person who owns it</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">Search by symptom, exact error, environment, or technology. Every result stays tied to a source record and an approved solver profile.</p>
+          <form className="mt-7 flex flex-col gap-3 rounded-[14px] border border-border bg-surface p-2 shadow-[0_18px_48px_rgb(15_23_42/0.08)] sm:flex-row" onSubmit={submit}>
             <label className="sr-only" htmlFor="solution-search">{copy.search.title}</label>
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-text-muted" aria-hidden="true" />
-              <input className="h-[52px] w-full rounded-[14px] border border-transparent bg-surface pl-11 pr-4 text-sm text-text outline-none transition-all duration-160 placeholder:text-text-muted hover:bg-surface-muted/60 focus:border-accent focus:bg-surface focus:shadow-focus" id="solution-search" minLength={3} onChange={(event) => setInput(event.target.value)} placeholder={copy.search.placeholder} value={input} />
+              <input className="h-[52px] w-full rounded-[10px] border border-transparent bg-surface pl-11 pr-4 font-data text-sm text-text outline-none transition-all duration-160 placeholder:font-sans placeholder:text-text-muted hover:bg-surface-muted/60 focus:border-accent focus:bg-surface focus:shadow-focus" id="solution-search" minLength={3} onChange={(event) => setInput(event.target.value)} placeholder={copy.search.placeholder} value={input} />
             </div>
             <Button className="h-[52px] px-5" disabled={input.trim().length < 3} type="submit" variant="primary"><Search className="h-4 w-4" />{copy.action.search}</Button>
           </form>
@@ -140,14 +141,14 @@ export function SearchPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {selectedTechnologyValues.map((value) => <button className="inline-flex h-8 items-center gap-1 rounded-full border border-primary/20 bg-brand-soft px-2.5 text-xs font-medium text-brand-strong" key={value} onClick={() => setTechnology(value, false)} type="button">{value}<X className="h-3 w-3" /></button>)}
-                <Button aria-pressed={includeSummary} onClick={() => setSearch({ summary: includeSummary ? undefined : "true", page: undefined })}><Sparkles className="h-4 w-4" />{copy.search.generateSummary}</Button>
+                <Button aria-pressed={includeSummary} title="Ask the grounded model to summarize the results below, with citations back to source records" variant={includeSummary ? "primary" : "secondary"} onClick={() => setSearch({ summary: includeSummary ? undefined : "true", page: undefined })}><Sparkles className="h-4 w-4" />{copy.search.generateSummary}</Button>
               </div>
             </div>
 
             {resultQuery.isLoading && <LoadingSkeleton rows={5} />}
             {resultQuery.isError && <StatePanel kind="error" onRetry={() => void resultQuery.refetch()} />}
             {response && <SearchContextPanel response={response} query={query} selectedTechnologyValues={selectedTechnologyValues} />}
-            {response && <SearchResults response={response} selectedSolutionId={selectedSolutionId} onPage={(nextPage) => setSearch({ page: String(nextPage), solution: undefined, solver: undefined })} onPreview={openSolution} onSolver={openSolver} />}
+            {response && <SearchResults reduceMotion={reduceMotion} response={response} selectedSolutionId={selectedSolutionId} onPage={(nextPage) => setSearch({ page: String(nextPage), solution: undefined, solver: undefined })} onPreview={openSolution} onSolver={openSolver} />}
           </section>
 
           {(selectedResult || selectedSolverId) && (
@@ -166,7 +167,33 @@ export function SearchPage() {
 
 function EmptySearch({ onSearch }: { onSearch: (value: string) => void }) {
   const examples = ["ModuleNotFoundError", "Terraform state lock", "CrashLoopBackOff", "AccessDenied", "CUDA out of memory", "Kafka consumer lag"];
-  return <section className="product-card overflow-hidden rounded-[20px] p-8 text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-app bg-brand-soft text-brand-strong"><Search className="h-5 w-5" /></span><h2 className="mt-5 text-lg font-semibold">Start with the issue in front of you</h2><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-text-muted">Use the exact error when you have it. The platform combines structured search, verified technical context, and expert ownership.</p><div className="mt-6 flex flex-wrap justify-center gap-2">{examples.map((example) => <button className="pressable rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-text-muted transition hover:border-border-strong hover:bg-elevated hover:text-text hover:shadow-sm" key={example} onClick={() => onSearch(example)}>{example}</button>)}</div></section>;
+  return (
+    <section className="product-card grid gap-6 overflow-hidden rounded-[12px] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
+      <div>
+        <span className="inline-flex items-center gap-2 font-data text-[11px] uppercase tracking-[0.14em] text-brand-strong"><Search className="h-3.5 w-3.5" />Start with the issue in front of you</span>
+        <h2 className="mt-3 font-display text-xl font-semibold tracking-[-0.01em]">Paste the exact error, or describe the roadblock</h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-text-muted">The platform combines structured search, verified technical context, and expert ownership - every result below traces back to a person you can reach.</p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          {examples.map((example) => <button className="pressable rounded-control border border-border bg-surface px-3 py-1.5 font-data text-xs text-text-muted transition hover:border-border-strong hover:bg-elevated hover:text-text hover:shadow-sm" key={example} onClick={() => onSearch(example)}>{example}</button>)}
+        </div>
+      </div>
+      <div aria-hidden="true" className="ledger-row rounded-[10px] p-4 opacity-90">
+        <span className="ledger-rail bg-success" />
+        <div className="pl-2">
+          <p className="font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">Record - #f21c9a0</p>
+          <p className="mt-1.5 font-display text-sm font-semibold text-text">CrashLoopBackOff on payments-api</p>
+          <p className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">Liveness probe timed out during cold start after the base image bump...</p>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="status-chip inline-flex items-center gap-1 rounded-control border border-success/40 bg-success/[0.07] px-2 py-1 uppercase text-success">Verified</span>
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 border-t border-dashed border-border pt-3 text-xs text-text-muted">
+            <span className="font-data text-text-muted/70">blame ?</span>
+            <span className="font-medium text-text">this is what a result looks like</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function SearchFilters({ selectedTechnologyValues, sort, technologies, verifiedOnly, onClear, onSort, onTechnology, onVerified }: { selectedTechnologyValues: string[]; sort: Sort; technologies: { id: string; name: string; slug: string }[]; verifiedOnly: boolean; onClear: () => void; onSort: (sort: Sort) => void; onTechnology: (value: string, enabled: boolean) => void; onVerified: (value: boolean) => void }) {
@@ -189,11 +216,10 @@ function SearchContextPanel({ query, response, selectedTechnologyValues }: { que
   const queryHints = extractQueryHints(query, selectedTechnologyValues);
 
   return (
-    <section className="product-card mb-5 overflow-hidden rounded-[20px] p-4 sm:p-5">
-      <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+    <section className="product-card mb-5 overflow-hidden rounded-[12px] p-4 sm:p-5">
       <div className="relative grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] xl:items-start">
         <div className="min-w-0">
-          <span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong"><ShieldCheck className="h-3.5 w-3.5" />Search context</span>
+          <span className="inline-flex items-center gap-2 font-data text-[10px] uppercase tracking-[0.14em] text-brand-strong"><ShieldCheck className="h-3.5 w-3.5" />Search context</span>
           <p className="mt-1 text-sm leading-6 text-text-muted">
             {data.no_answer
               ? "No available solution is strong enough to recommend. Try adding the exact error, service, or environment."
@@ -236,14 +262,55 @@ function extractQueryHints(query: string, selectedTechnologyValues: string[]) {
   return Array.from(new Set([...errorTerms, ...selectedTechnologyValues, ...longTerms])).slice(0, 6);
 }
 
-function SearchResults({ response, selectedSolutionId, onPreview, onSolver, onPage }: { response: Awaited<ReturnType<typeof searchSolutions>>; selectedSolutionId: string | null; onPreview: (result: SearchResult) => void; onSolver: (result: SearchResult) => void; onPage: (page: number) => void }) {
+function SearchResults({ reduceMotion, response, selectedSolutionId, onPreview, onSolver, onPage }: { reduceMotion: boolean | null; response: Awaited<ReturnType<typeof searchSolutions>>; selectedSolutionId: string | null; onPreview: (result: SearchResult) => void; onSolver: (result: SearchResult) => void; onPage: (page: number) => void }) {
   const { data, meta } = response;
   if (data.no_answer) return <section className="product-card rounded-[20px] px-6 py-10 text-center"><h2 className="text-lg font-semibold">{copy.search.noAnswerTitle}</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-text-muted">{copy.search.noAnswerBody}</p></section>;
   return <>
-    {data.summary && <section className="product-card mb-5 overflow-hidden rounded-[20px] p-5"><div className="relative"><div className="flex items-center gap-2 text-brand-strong"><Sparkles className="h-4 w-4" /><h2 className="text-sm font-semibold">{copy.search.summary}</h2></div><p className="mt-3 text-sm leading-7 text-text">{data.summary}</p><div className="mt-4 flex flex-wrap gap-2"><span className="text-xs text-text-muted">{copy.search.sources}</span>{data.summary_citations.map((citation) => <code className="max-w-full truncate rounded-control border border-primary/15 bg-surface/75 px-2 py-1 text-[10px] text-text-muted" key={citation}>{citation}</code>)}</div></div></section>}
+    <AnimatePresence initial={false}>
+      {data.summary && (
+        <motion.section
+          animate={reduceMotion ? { opacity: 1 } : { height: "auto", opacity: 1, y: 0 }}
+          className="relative mb-5 overflow-hidden rounded-[12px] border border-primary/25 bg-brand-soft/40 p-5 sm:p-6"
+          exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0, y: -6 }}
+          initial={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0, y: -6 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-primary to-brand-strong" />
+          <div className="relative pl-2">
+            <div className="flex items-center gap-2 font-data text-[11px] uppercase tracking-[0.14em] text-brand-strong"><Sparkles className="h-3.5 w-3.5" />{copy.search.summary} - grounded in the records below</div>
+            <p className="mt-3 max-w-3xl text-[15px] leading-7 text-text">{data.summary}</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">{copy.search.sources}</span>
+              {data.summary_citations.map((citation) => <code className="max-w-full truncate rounded-control border border-primary/20 bg-surface px-2 py-1 font-data text-[10px] text-brand-strong" key={citation}>#{citation.slice(0, 7)}</code>)}
+            </div>
+            <p className="mt-3 text-[11px] leading-5 text-text-muted">Generated only from the authorized solutions on this page. Ownership, contact details, and verification status always come from the records themselves, never from the model.</p>
+          </div>
+        </motion.section>
+      )}
+    </AnimatePresence>
     {data.summary_error && <p className="mb-4 rounded-control border border-warning/25 bg-warning/5 px-3 py-2 text-sm text-warning">{data.summary_error}</p>}
     {data.service_status.semantic_search === "not_available" && <p className="mb-4 rounded-control border border-border bg-surface px-3 py-2 text-xs text-text-muted"><AlertCircle className="mr-1 inline h-3.5 w-3.5" />Search is using exact wording and documented error messages for this request.</p>}
-    <div className="space-y-3">{data.results.map((result) => <SearchResultCard key={result.solution_id} result={result} selected={selectedSolutionId === result.challenge_id || selectedSolutionId === result.solution_id} onPreview={() => onPreview(result)} onSolver={() => onSolver(result)} />)}</div>
+    <motion.div
+      animate="visible"
+      className="space-y-3"
+      initial={reduceMotion ? false : "hidden"}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: 0.035 } },
+      }}
+    >
+      {data.results.map((result) => (
+        <motion.div
+          key={result.solution_id}
+          variants={{
+            hidden: { opacity: 0, y: 8 },
+            visible: { opacity: 1, transition: { duration: 0.18, ease: "easeOut" }, y: 0 },
+          }}
+        >
+          <SearchResultCard result={result} selected={selectedSolutionId === result.challenge_id || selectedSolutionId === result.solution_id} onPreview={() => onPreview(result)} onSolver={() => onSolver(result)} />
+        </motion.div>
+      ))}
+    </motion.div>
     <div className="product-card mt-6 flex items-center justify-between rounded-app px-3 py-2"><Button disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)}><ChevronLeft className="h-4 w-4" />{copy.search.previousPage}</Button><span className="text-xs text-text-muted">Page {meta.page}</span><Button disabled={!meta.has_next} onClick={() => onPage(meta.page + 1)}>{copy.search.nextPage}<ChevronRight className="h-4 w-4" /></Button></div>
   </>;
 }
