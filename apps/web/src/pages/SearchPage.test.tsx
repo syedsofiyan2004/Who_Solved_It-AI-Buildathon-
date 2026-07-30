@@ -72,13 +72,37 @@ describe("SearchPage", () => {
   });
 
   it("restores the applied query and filters from a refreshed URL", async () => {
+    const user = userEvent.setup();
     apiMocks.searchSolutions.mockResolvedValue(response());
     renderSearch(["/search?q=Terraform&page=2&verified=false&sort=newest&summary=true"]);
     expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Terraform");
     expect(screen.getByDisplayValue("Terraform")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Filters/ }));
     expect(screen.getByLabelText(/Verified solutions/)).not.toBeChecked();
     expect(screen.getByLabelText("Sort results")).toHaveValue("newest");
     expect(screen.getByRole("button", { name: "Generate grounded summary" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the results toolbar in normal page flow", async () => {
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch();
+    const toolbar = await screen.findByTestId("search-results-toolbar");
+    expect(toolbar).not.toHaveClass("sticky");
+  });
+
+  it("renders grounded summary citations as readable source markers", async () => {
+    const firstCitation = "7798fd48-7ebb-531a-a6ae-baa95e658cdd";
+    const secondCitation = "f9477aa9-2df4-51fb-964f-57eafe8a9699";
+    apiMocks.searchSolutions.mockResolvedValue(response({
+      summary: `Lambda subnet expansion exceeded the VPC limit [${firstCitation}]. VPC attachment failed because subnet routes missed the endpoint [${secondCitation}].`,
+      summary_citations: [firstCitation, secondCitation],
+      service_status: { keyword_search: "available", semantic_search: "available", grounded_summary: "available" },
+    }));
+    renderSearch(["/search?q=Lambda%20API&summary=true"]);
+    expect(await screen.findByText("Source 1")).toBeInTheDocument();
+    expect(screen.getByText("Source 2")).toBeInTheDocument();
+    expect(screen.queryByText(firstCitation, { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByText(secondCitation, { exact: false })).not.toBeInTheDocument();
   });
 
   it("preserves technology filters from the URL", async () => {
@@ -134,7 +158,7 @@ describe("SearchPage", () => {
     renderSearch();
     const retry = await screen.findByRole("button", { name: "Try again" });
     fireEvent.click(retry);
-    expect(await screen.findByText("Docker", { exact: true })).toBeInTheDocument();
+    expect((await screen.findAllByText("Docker", { exact: true })).length).toBeGreaterThan(0);
     expect(apiMocks.searchSolutions).toHaveBeenCalledTimes(2);
   });
 });

@@ -102,6 +102,8 @@ export const copy = {
     emptyTitle: "Start with the problem you are trying to solve",
     emptyBody: "Search uses past solutions that you are allowed to access.",
     filters: "Filters",
+    showFilters: "Filters",
+    hideFilters: "Hide filters",
     verifiedOnly: "Verified only",
     sort: "Sort results",
     sortRelevance: "Relevance",

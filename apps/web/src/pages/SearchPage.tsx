@@ -2,7 +2,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { AlertCircle, ChevronLeft, ChevronRight, Filter, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { DetailSheet } from "../components/product/DetailSheet";
@@ -30,8 +30,10 @@ export function SearchPage() {
   const selectedSolverId = params.get("solver");
   const selectedTechnologyValues = params.getAll("technology");
   const [input, setInput] = useState(query);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const validQuery = query.trim().length >= 3;
+  const appliedFilterCount = selectedTechnologyValues.length + (verifiedOnly ? 0 : 1) + (sort === "newest" ? 1 : 0);
   const workspaceKey = useMemo(() => {
     const base = new URLSearchParams(params);
     base.delete("solution");
@@ -66,6 +68,14 @@ export function SearchPage() {
   const response = resultQuery.data;
   const selectedResult = response?.data.results.find((result) => result.challenge_id === selectedSolutionId || result.solution_id === selectedSolutionId) ?? null;
   const activeSolverId = selectedSolverId ?? selectedResult?.solver.user_id ?? null;
+  const detailPanelOpen = Boolean(selectedResult || selectedSolverId);
+  const gridColumns = filtersOpen
+    ? detailPanelOpen
+      ? "xl:grid-cols-[260px_minmax(0,1fr)_440px]"
+      : "lg:grid-cols-[260px_minmax(0,1fr)]"
+    : detailPanelOpen
+      ? "xl:grid-cols-[minmax(0,1fr)_440px]"
+      : "";
   const solver = useQuery({
     queryKey: ["employee-profile", activeSolverId],
     queryFn: () => getEmployeeProfile(activeSolverId ?? ""),
@@ -130,16 +140,17 @@ export function SearchPage() {
       {!validQuery && <EmptySearch onSearch={(value) => { setInput(value); setSearch({ q: value }); }} />}
 
       {validQuery && (
-        <div className={`grid gap-6 ${selectedResult || selectedSolverId ? "xl:grid-cols-[260px_minmax(0,1fr)_440px]" : "lg:grid-cols-[260px_minmax(0,1fr)]"}`}>
-          <SearchFilters selectedTechnologyValues={selectedTechnologyValues} sort={sort} technologies={technologies.data ?? []} verifiedOnly={verifiedOnly} onClear={clear} onSort={(value) => setSearch({ sort: value === "newest" ? "newest" : undefined, page: undefined, solution: undefined, solver: undefined })} onTechnology={setTechnology} onVerified={(value) => setSearch({ verification: value ? "verified" : "all", verified: undefined, page: undefined, solution: undefined, solver: undefined })} />
+        <div className={`grid gap-6 ${gridColumns}`}>
+          {filtersOpen && <SearchFilters selectedTechnologyValues={selectedTechnologyValues} sort={sort} technologies={technologies.data ?? []} verifiedOnly={verifiedOnly} onClear={clear} onSort={(value) => setSearch({ sort: value === "newest" ? "newest" : undefined, page: undefined, solution: undefined, solver: undefined })} onTechnology={setTechnology} onVerified={(value) => setSearch({ verification: value ? "verified" : "all", verified: undefined, page: undefined, solution: undefined, solver: undefined })} />}
 
           <section aria-live="polite" className="min-w-0">
-            <div className="workspace-surface sticky top-[76px] z-10 mb-4 flex flex-col gap-3 rounded-[18px] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="workspace-surface mb-4 flex flex-col gap-3 rounded-[18px] px-4 py-3 sm:flex-row sm:items-center sm:justify-between" data-testid="search-results-toolbar">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-text" data-testid="applied-search-query">{copy.search.appliedQuery} <span className="font-normal text-text-muted">“{query}”</span></p>
                 <p className="mt-1 text-xs text-text-muted">{response ? `${response.meta.total} relevant solutions` : verifiedOnly ? copy.search.verifiedResults : copy.search.resultCount}</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button aria-controls="search-filter-panel" aria-expanded={filtersOpen} variant="secondary" onClick={() => setFiltersOpen((open) => !open)}><SlidersHorizontal className="h-4 w-4" />{filtersOpen ? copy.search.hideFilters : copy.search.showFilters}{appliedFilterCount > 0 && <span className="ml-1 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-semibold text-brand-strong">{appliedFilterCount}</span>}</Button>
                 {selectedTechnologyValues.map((value) => <button className="inline-flex h-8 items-center gap-1 rounded-full border border-primary/20 bg-brand-soft px-2.5 text-xs font-medium text-brand-strong" key={value} onClick={() => setTechnology(value, false)} type="button">{value}<X className="h-3 w-3" /></button>)}
                 <Button aria-pressed={includeSummary} title="Ask the grounded model to summarize the results below, with citations back to source records" variant={includeSummary ? "primary" : "secondary"} onClick={() => setSearch({ summary: includeSummary ? undefined : "true", page: undefined })}><Sparkles className="h-4 w-4" />{copy.search.generateSummary}</Button>
               </div>
@@ -198,7 +209,7 @@ function EmptySearch({ onSearch }: { onSearch: (value: string) => void }) {
 
 function SearchFilters({ selectedTechnologyValues, sort, technologies, verifiedOnly, onClear, onSort, onTechnology, onVerified }: { selectedTechnologyValues: string[]; sort: Sort; technologies: { id: string; name: string; slug: string }[]; verifiedOnly: boolean; onClear: () => void; onSort: (sort: Sort) => void; onTechnology: (value: string, enabled: boolean) => void; onVerified: (value: boolean) => void }) {
   return (
-    <aside className="premium-panel h-fit rounded-[18px] p-4 lg:sticky lg:top-[96px]">
+    <aside aria-label="Search filters" className="premium-panel h-fit rounded-[18px] p-4" id="search-filter-panel">
       <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-control bg-brand-soft text-brand-strong"><SlidersHorizontal className="h-4 w-4" /></span><div><p className="text-sm font-semibold">{copy.search.filters}</p><p className="text-[10px] text-text-muted">Refine the workspace</p></div></div>{selectedTechnologyValues.length > 0 && <span className="rounded-full bg-brand-soft px-2 py-1 text-[10px] font-semibold text-brand-strong">{selectedTechnologyValues.length}</span>}</div>
       <label className="pressable mt-5 flex min-h-11 items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 text-sm hover:border-border-strong hover:bg-surface-muted"><span><span className="block font-medium text-text">Verified solutions</span><span className="mt-0.5 block text-[10px] text-text-muted">Reviewed and reusable</span></span><input checked={verifiedOnly} onChange={(event) => onVerified(event.target.checked)} type="checkbox" /></label>
       {technologies.length > 0 && <fieldset className="mt-5"><legend className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">{copy.profile.technologies}</legend><div className="mt-3 max-h-64 space-y-1 overflow-auto pr-1">{technologies.slice(0, 18).map((technology) => { const checked = selectedTechnologyValues.includes(technology.slug) || selectedTechnologyValues.includes(technology.name) || selectedTechnologyValues.includes(technology.id); return <label className={`pressable flex min-h-9 items-center gap-2 rounded-control px-2.5 text-xs transition ${checked ? "bg-brand-soft font-medium text-brand-strong shadow-sm" : "text-text-muted hover:bg-surface-muted hover:text-text"}`} key={technology.id}><input checked={checked} onChange={(event) => onTechnology(technology.slug, event.target.checked)} type="checkbox" />{technology.name}</label>; })}</div></fieldset>}
@@ -252,6 +263,32 @@ function EvidenceTile({ body, label, value }: { body: string; label: string; val
   return <div className="rounded-app border border-border bg-surface/80 px-3 py-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">{label}</p><p className="mt-1 text-lg font-semibold tracking-[-0.03em] text-text">{value}</p><p className="mt-1 text-[11px] leading-5 text-text-muted">{body}</p></div>;
 }
 
+const UUID_CITATION_PATTERN = /\[([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\]/gi;
+
+function GroundedSummaryText({ citations, summary }: { citations: string[]; summary: string }) {
+  const citationOrder = new Map(citations.map((citation, index) => [citation.toLowerCase(), index + 1]));
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  UUID_CITATION_PATTERN.lastIndex = 0;
+  while ((match = UUID_CITATION_PATTERN.exec(summary)) !== null) {
+    if (match.index > lastIndex) parts.push(summary.slice(lastIndex, match.index));
+    const citationNumber = citationOrder.get(match[1].toLowerCase());
+    if (citationNumber) {
+      parts.push(
+        <sup className="mx-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-surface px-1 font-data text-[10px] font-semibold leading-none text-brand-strong" key={`${match[1]}-${match.index}`}>
+          {citationNumber}
+        </sup>,
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < summary.length) parts.push(summary.slice(lastIndex));
+
+  return <p className="mt-3 max-w-3xl text-[15px] leading-7 text-text">{parts}</p>;
+}
+
 function extractQueryHints(query: string, selectedTechnologyValues: string[]) {
   const errorTerms = query.match(/[A-Z][A-Za-z]+(?:Error|Exception|BackOff|Timeout|Denied|Exceeded|Failed|Mismatch)/g) ?? [];
   const longTerms = query
@@ -278,10 +315,10 @@ function SearchResults({ reduceMotion, response, selectedSolutionId, onPreview, 
           <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-primary to-brand-strong" />
           <div className="relative pl-2">
             <div className="flex items-center gap-2 font-data text-[11px] uppercase tracking-[0.14em] text-brand-strong"><Sparkles className="h-3.5 w-3.5" />{copy.search.summary} - grounded in the records below</div>
-            <p className="mt-3 max-w-3xl text-[15px] leading-7 text-text">{data.summary}</p>
+            <GroundedSummaryText citations={data.summary_citations} summary={data.summary} />
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">{copy.search.sources}</span>
-              {data.summary_citations.map((citation) => <code className="max-w-full truncate rounded-control border border-primary/20 bg-surface px-2 py-1 font-data text-[10px] text-brand-strong" key={citation}>#{citation.slice(0, 7)}</code>)}
+              {data.summary_citations.map((citation, index) => <code className="max-w-full truncate rounded-control border border-primary/20 bg-surface px-2 py-1 font-data text-[10px] text-brand-strong" key={citation} title={citation}>Source {index + 1}</code>)}
             </div>
             <p className="mt-3 text-[11px] leading-5 text-text-muted">Generated only from the authorized solutions on this page. Ownership, contact details, and verification status always come from the records themselves, never from the model.</p>
           </div>

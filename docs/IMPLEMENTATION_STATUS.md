@@ -60,10 +60,11 @@
 - `docker compose exec -T api python scripts/seed_dev.py` passed and generated 679 synthetic records.
 - `docker compose exec -T api python scripts/check_seed_quality.py` passed.
 - `docker compose exec -T web npm run typecheck` passed.
-- `docker compose exec -T web npm test` passed: 18 tests.
+- `docker compose exec -T web npm test` passed: 20 tests.
 - `docker compose exec -T web npm run build` passed.
 - `python apps\api\scripts\scan_secrets.py .` passed.
 - `python apps\api\scripts\package_source.py --output artifacts\knowledge-platform-source.zip` passed.
 - `python apps\api\scripts\verify_source_package.py --archive artifacts\knowledge-platform-source.zip` passed.
 - Browser visual smoke test passed for login and `http://localhost:5173/search?q=CrashLoopBackOff`: 10 ledger rows rendered, the grounded-summary action remained available as an explicit opt-in, no search error state appeared, no mojibake replacement characters appeared, and no `backdrop-blur` classes were present.
 - Desktop shell regression check passed at a 1440px viewport: the sidebar remains fixed at the top-left and no longer pushes the top bar/content downward.
+- Search UI polish regression checks passed: grounded-summary UUID citations render as readable source markers, the summary action is no longer sticky during result scrolling, and filters open only on demand from the result toolbar.

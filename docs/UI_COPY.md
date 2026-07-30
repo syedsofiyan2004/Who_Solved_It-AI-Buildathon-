@@ -152,6 +152,8 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `search.title` | Search past solutions |
 | `search.placeholder` | Paste an error message or describe the roadblock |
 | `search.filters` | Filters |
+| `search.show_filters` | Filters |
+| `search.hide_filters` | Hide filters |
 | `search.verified_only` | Verified only |
 | `search.technology` | Technology |
 | `search.department` | Department |
