@@ -202,7 +202,6 @@ kbd,
    full-bleed contrast. Deliberately not glassy: flat graphite, a hairline
    grid, and a single ledger-rule in the signal color, nothing else. */
 .enterprise-shell {
-  position: relative;
   background: rgb(13 16 20);
   color: rgb(220 224 214);
 }

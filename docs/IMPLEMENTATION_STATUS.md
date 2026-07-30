@@ -66,3 +66,4 @@
 - `python apps\api\scripts\package_source.py --output artifacts\knowledge-platform-source.zip` passed.
 - `python apps\api\scripts\verify_source_package.py --archive artifacts\knowledge-platform-source.zip` passed.
 - Browser visual smoke test passed for login and `http://localhost:5173/search?q=CrashLoopBackOff`: 10 ledger rows rendered, the grounded-summary action remained available as an explicit opt-in, no search error state appeared, no mojibake replacement characters appeared, and no `backdrop-blur` classes were present.
+- Desktop shell regression check passed at a 1440px viewport: the sidebar remains fixed at the top-left and no longer pushes the top bar/content downward.
