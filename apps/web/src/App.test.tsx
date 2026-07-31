@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
-import { AuthProvider } from "./auth/AuthProvider";
+import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { setAccessToken } from "./auth/token";
 import { createChallenge, updateMyProfile } from "./services/api";
 
@@ -175,8 +175,12 @@ vi.mock("./services/api", () => ({
   }))
 }));
 
-function renderApp(path = "/dashboard") {
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AuthProvider><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={[path]}><App /></MemoryRouter></AuthProvider></QueryClientProvider>);
+function createTestQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function renderApp(path = "/dashboard", queryClient = createTestQueryClient()) {
+  render(<QueryClientProvider client={queryClient}><AuthProvider><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={[path]}><App /></MemoryRouter></AuthProvider></QueryClientProvider>);
 }
 
 async function signIn(user: ReturnType<typeof userEvent.setup>, role: "employee" | "reviewer" = "employee") {
@@ -292,8 +296,40 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { name: "Review submitted solutions" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Container startup failure/ })).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "Approve" }));
-    expect(await screen.findByText("Review decision recorded.")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: /Approve/ }));
+    expect(await screen.findByText("Publishes this solution as verified knowledge.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Record review decision" }));
+    expect(await screen.findByText("Approved. The solution is now verified and available to authorized search users.")).toBeInTheDocument();
+  });
+
+  it("does not reuse a stale empty review queue after signing in as a reviewer", async () => {
+    const user = userEvent.setup();
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(["review-queue", "2"], []);
+    renderApp("/reviews", queryClient);
+    await signIn(user, "reviewer");
+
+    expect(await screen.findByRole("button", { name: /Container startup failure/ })).toBeInTheDocument();
+  });
+
+  it("clears private query data on login and logout", async () => {
+    const user = userEvent.setup();
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AuthCacheProbe cacheKey={["employee-profile", "me"]} />
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    queryClient.setQueryData(["employee-profile", "me"], { display_name: "Previous user" });
+    await user.click(screen.getByRole("button", { name: "Probe login" }));
+    await waitFor(() => expect(queryClient.getQueryData(["employee-profile", "me"])).toBeUndefined());
+
+    queryClient.setQueryData(["employee-profile", "me"], { display_name: "Signed-in user" });
+    await user.click(screen.getByRole("button", { name: "Probe logout" }));
+    await waitFor(() => expect(queryClient.getQueryData(["employee-profile", "me"])).toBeUndefined());
   });
 
   it("renders solution detail with solver contact and feedback controls", async () => {
@@ -307,3 +343,14 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /Resolved my issue/ }));
   });
 });
+
+function AuthCacheProbe({ cacheKey }: { cacheKey: string[] }) {
+  const auth = useAuth();
+  return (
+    <div>
+      <button onClick={() => void auth.login({ email: "srikar.deshmukh@minfytech.com", password: "development-only-password" })}>Probe login</button>
+      <button onClick={() => void auth.logout()}>Probe logout</button>
+      <span>{cacheKey.join("/")}</span>
+    </div>
+  );
+}

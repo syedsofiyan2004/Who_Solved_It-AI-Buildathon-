@@ -37,24 +37,33 @@ def repository_fixture():
     suffix = str(uuid4())[:8]
     department = Department(id=uuid4(), name=f"Engineering {suffix}", slug=f"engineering-{suffix}")
     team = Team(id=uuid4(), department_id=department.id, name=f"Platform {suffix}", slug=f"platform-{suffix}")
+    secondary_department = Department(id=uuid4(), name=f"Delivery {suffix}", slug=f"delivery-{suffix}")
+    secondary_team = Team(id=uuid4(), department_id=secondary_department.id, name=f"Review Guild {suffix}", slug=f"review-guild-{suffix}")
     technology = Technology(id=uuid4(), name=f"Python {suffix}", slug=f"python-{suffix}", category="language")
     secondary_technology = Technology(id=uuid4(), name=f"Docker {suffix}", slug=f"docker-{suffix}", category="platform")
     users = {
         "author": User(id=uuid4(), email=f"author-{suffix}@example.test", password_hash=hash_password("correct-password"), role=AppRole.EMPLOYEE, is_active=True),
         "reviewer": User(id=uuid4(), email=f"reviewer-{suffix}@example.test", password_hash=hash_password("correct-password"), role=AppRole.REVIEWER, is_active=True),
+        "cross_team_reviewer": User(id=uuid4(), email=f"cross-reviewer-{suffix}@example.test", password_hash=hash_password("correct-password"), role=AppRole.REVIEWER, is_active=True),
         "outsider": User(id=uuid4(), email=f"outsider-{suffix}@example.test", password_hash=hash_password("correct-password"), role=AppRole.EMPLOYEE, is_active=True),
     }
     with SessionLocal() as db:
-        db.add_all([department, team, technology, secondary_technology, *users.values()])
+        db.add_all([department, team, secondary_department, secondary_team, technology, secondary_technology, *users.values()])
         db.flush()
-        db.add_all([
-            EmployeeProfile(user_id=user.id, display_name=key.title(), job_title="Engineer", department_id=department.id, team_id=team.id, contact_email=user.email)
-            for key, user in users.items()
-        ])
+        db.add_all(
+            [
+                EmployeeProfile(user_id=users["author"].id, display_name="Author", job_title="Engineer", department_id=department.id, team_id=team.id, contact_email=users["author"].email),
+                EmployeeProfile(user_id=users["reviewer"].id, display_name="Reviewer", job_title="Engineer", department_id=department.id, team_id=team.id, contact_email=users["reviewer"].email),
+                EmployeeProfile(user_id=users["outsider"].id, display_name="Outsider", job_title="Engineer", department_id=department.id, team_id=team.id, contact_email=users["outsider"].email),
+                EmployeeProfile(user_id=users["cross_team_reviewer"].id, display_name="Cross Team Reviewer", job_title="Reviewer", department_id=secondary_department.id, team_id=secondary_team.id, contact_email=users["cross_team_reviewer"].email),
+            ]
+        )
         db.commit()
     yield {
         "department": department,
         "team": team,
+        "secondary_department": secondary_department,
+        "secondary_team": secondary_team,
         "technology": technology,
         "secondary_technology": secondary_technology,
         "users": users,
@@ -78,7 +87,9 @@ def repository_fixture():
         db.execute(delete(User).where(User.id.in_(ids)))
         db.execute(delete(Technology).where(Technology.id.in_([technology.id, secondary_technology.id])))
         db.execute(delete(Team).where(Team.id == team.id))
+        db.execute(delete(Team).where(Team.id == secondary_team.id))
         db.execute(delete(Department).where(Department.id == department.id))
+        db.execute(delete(Department).where(Department.id == secondary_department.id))
         db.commit()
     for storage_key in attachment_keys:
         (Path(get_settings().upload_directory) / storage_key).unlink(missing_ok=True)
@@ -221,7 +232,7 @@ def test_author_draft_submit_review_and_authorized_detail(repository_fixture):
 
     queue = client.get("/api/v1/reviews/queue", headers=reviewer_headers)
     assert queue.status_code == 200
-    assert queue.json()["data"][0]["id"] == challenge_id
+    assert challenge_id in [item["id"] for item in queue.json()["data"]]
     solution_id = SessionLocal().query(Solution.id).filter(Solution.challenge_id == challenge_id).scalar()
     reviewed = client.post("/api/v1/reviews", headers=reviewer_headers, json={"solution_id": str(solution_id), "decision": "verified"})
     assert reviewed.status_code == 201
@@ -232,6 +243,22 @@ def test_author_draft_submit_review_and_authorized_detail(repository_fixture):
     browse = client.get("/api/v1/challenges", headers=outsider_headers)
     assert browse.status_code == 200
     assert browse.json()["data"][0]["id"] == challenge_id
+
+
+def test_company_submission_reaches_reviewer_outside_author_team(repository_fixture):
+    client = TestClient(create_app())
+    author_headers = _headers(client, repository_fixture["users"]["author"].email)
+    cross_reviewer_headers = _headers(client, repository_fixture["users"]["cross_team_reviewer"].email)
+
+    created = client.post("/api/v1/challenges", headers=author_headers, json=_draft_payload(repository_fixture, "company"))
+    assert created.status_code == 201
+    challenge_id = created.json()["data"]["id"]
+    submitted = client.post(f"/api/v1/challenges/{challenge_id}/submit", headers=author_headers)
+    assert submitted.status_code == 200
+
+    queue = client.get("/api/v1/reviews/queue", headers=cross_reviewer_headers)
+    assert queue.status_code == 200
+    assert challenge_id in [item["id"] for item in queue.json()["data"]]
 
 
 def test_owner_and_attachment_authorization(repository_fixture):
@@ -542,7 +569,8 @@ def test_verified_technical_edit_returns_solution_to_review_and_clears_stale_emb
     assert changed.json()["data"]["verified_by_name"] is None
     assert changed.json()["data"]["last_verified_at"] is None
     assert any(review["decision"] == "verified" for review in changed.json()["data"]["review_history"])
-    assert client.get("/api/v1/reviews/queue", headers=reviewer_headers).json()["data"][0]["id"] == challenge_id
+    queue = client.get("/api/v1/reviews/queue", headers=reviewer_headers)
+    assert challenge_id in [item["id"] for item in queue.json()["data"]]
     with SessionLocal() as db:
         assert db.scalar(select(SolutionEmbedding.id).where(SolutionEmbedding.solution_id == solution_id)) is None
 

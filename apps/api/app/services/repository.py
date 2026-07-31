@@ -45,12 +45,24 @@ def can_review(db: Session, reviewer: User, challenge: Challenge) -> bool:
         return True
     if reviewer.role != AppRole.REVIEWER or reviewer.id == challenge.owner_user_id:
         return False
+    if challenge.visibility == VisibilityLevel.COMPANY:
+        return True
+    if challenge.visibility == VisibilityLevel.ADMINISTRATOR:
+        return False
     reviewer_profile = get_active_profile(db, reviewer.id)
     if reviewer_profile is None:
         return False
-    if challenge.team_id is not None:
+    if challenge.visibility == VisibilityLevel.TEAM:
         return challenge.team_id == reviewer_profile.team_id
-    return challenge.department_id == reviewer_profile.department_id
+    if challenge.visibility == VisibilityLevel.DEPARTMENT:
+        return challenge.department_id == reviewer_profile.department_id
+    if challenge.visibility == VisibilityLevel.RESTRICTED:
+        return (
+            challenge.team_id == reviewer_profile.team_id
+            if challenge.team_id is not None
+            else challenge.department_id == reviewer_profile.department_id
+        )
+    return False
 
 
 def can_view_challenge(db: Session, viewer: User, challenge: Challenge) -> bool:

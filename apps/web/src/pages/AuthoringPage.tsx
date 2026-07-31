@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, CheckCircle2, FileCheck2, Save, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -51,6 +51,7 @@ const emptyForm: FormState = {
 };
 
 export function AuthoringPage() {
+  const queryClient = useQueryClient();
   const { challengeId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -160,6 +161,11 @@ export function AuthoringPage() {
     if (!saved) return;
     try {
       const submitted = await submitMutation.mutateAsync(saved.id);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["review-queue"] }),
+        queryClient.invalidateQueries({ queryKey: ["home-review-queue"] }),
+        queryClient.invalidateQueries({ queryKey: ["home-drafts"] }),
+      ]);
       setDirty(false);
       setMessage(copy.submit.submitSuccess);
       navigate(`/solutions/${submitted.id}`);
