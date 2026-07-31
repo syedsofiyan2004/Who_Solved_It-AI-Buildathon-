@@ -59,7 +59,7 @@ export function SolutionPreviewPanel({ result, onClose, onSolver }: { result: Se
         </div>
       </section>
 
-      <div className="sticky bottom-0 -mx-5 flex flex-wrap gap-2 border-t border-border bg-elevated px-5 pb-1 pt-4">
+      <div className="-mx-5 flex flex-wrap gap-2 border-t border-border bg-elevated px-5 pb-1 pt-4">
         {result.solver.contact_email && <a className="inline-flex h-9 items-center justify-center gap-2 rounded-control border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-accent-hover" href={`mailto:${result.solver.contact_email}`}><Mail className="h-4 w-4" />{copy.action.contactSolver}</a>}
         <Button onClick={onSolver}><UserRound className="h-4 w-4" aria-hidden="true" />{copy.action.viewSolverPanel}</Button>
         <Link className="inline-flex h-9 items-center justify-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-text transition-colors hover:bg-surface-muted" to={`/solutions/${result.challenge_id}`}>

@@ -736,7 +736,7 @@ def test_grounded_summary_uses_global_ranked_sources_not_only_current_page(repos
 
     def capture_sources(db, *, solution_ids):
         captured["solution_ids"] = solution_ids
-        return [SimpleNamespace(solution_id=solution_ids[0])]
+        return [SimpleNamespace(solution_id=solution_ids[0], technical_document="Technical grounding context")]
 
     monkeypatch.setattr("app.api.search.BedrockEmbeddingAdapter", _FakeEmbeddingAdapter)
     monkeypatch.setattr(

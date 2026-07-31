@@ -54,6 +54,24 @@ def test_grounded_generation_accepts_only_authorized_inline_citations():
     assert client.calls == 1
 
 
+def test_grounded_generation_accepts_uuid_citation_case_variance():
+    solution_id = uuid4()
+    response = json.dumps(
+        {
+            "summary": f"Correct the package path and rebuild. [{str(solution_id).upper()}]",
+            "citations": [str(solution_id)],
+        }
+    )
+    adapter = BedrockGroundedGenerationAdapter(Settings(**SETTINGS_VALUES), client=FakeGenerationClient(response))
+
+    answer = adapter.generate(
+        query="Container cannot import its package",
+        sources=[GroundingSource(solution_id=solution_id, technical_document="Title: Container import failure")],
+    )
+
+    assert answer.citations == [solution_id]
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -78,7 +96,10 @@ def test_nvidia_generation_adapter_returns_only_valid_grounded_json():
 
     def handler(request: httpx.Request) -> httpx.Response:
         request_payload = json.loads(request.content.decode())
-        assert request_payload["model"] == "moonshotai/kimi-k2.6"
+        assert request_payload["model"] == "openai/gpt-oss-20b"
+        assert request_payload["max_tokens"] == 1024
+        assert request_payload["temperature"] == 0
+        assert request_payload["response_format"] == {"type": "json_object"}
         assert request_payload["stream"] is False
         return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(response_payload)}}]})
 
@@ -87,6 +108,8 @@ def test_nvidia_generation_adapter_returns_only_valid_grounded_json():
         JWT_SECRET="<test-only-jwt-secret>",
         AI_PROVIDER="nvidia",
         NVIDIA_API_KEY="fictional-test-key",
+        NVIDIA_CHAT_MODEL="openai/gpt-oss-20b",
+        NVIDIA_GENERATION_MAX_TOKENS=1024,
         RAG_ENABLED=True,
     )
     adapter = NvidiaGroundedGenerationAdapter(settings, client=httpx.Client(transport=httpx.MockTransport(handler)))
@@ -96,4 +119,40 @@ def test_nvidia_generation_adapter_returns_only_valid_grounded_json():
     )
 
     assert answer.summary.startswith("Use the verified package path")
+    assert answer.citations == [solution_id]
+
+
+def test_nvidia_generation_retries_once_after_invalid_grounded_json():
+    solution_id = uuid4()
+    responses = [
+        {"summary": "Use the verified package path.", "citations": [str(solution_id)]},
+        {"summary": f"Use the verified package path. [{solution_id}]", "citations": [str(solution_id)]},
+    ]
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        request_payload = json.loads(request.content.decode())
+        if calls == 2:
+            assert "previous response was rejected" in request_payload["messages"][1]["content"].lower()
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(responses[calls - 1])}}]})
+
+    settings = Settings(
+        DATABASE_URL="postgresql+psycopg://app_user:<password>@postgres:5432/knowledge_platform",
+        JWT_SECRET="<test-only-jwt-secret>",
+        AI_PROVIDER="nvidia",
+        NVIDIA_API_KEY="fictional-test-key",
+        NVIDIA_CHAT_MODEL="openai/gpt-oss-20b",
+        NVIDIA_GENERATION_MAX_TOKENS=1024,
+        RAG_ENABLED=True,
+    )
+    adapter = NvidiaGroundedGenerationAdapter(settings, client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+    answer = adapter.generate(
+        query="Container package error",
+        sources=[GroundingSource(solution_id=solution_id, technical_document="Title: Package path")],
+    )
+
+    assert calls == 2
     assert answer.citations == [solution_id]

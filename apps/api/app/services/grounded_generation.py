@@ -120,32 +120,40 @@ class NvidiaGroundedGenerationAdapter:
 
     def generate(self, *, query: str, sources: list[GroundingSource]) -> GroundedAnswer:
         source_text = _prepare_source_text(query, sources)
-        payload = {
-            "model": self.settings.nvidia_chat_model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Search query:\n{query}\n\nAuthorized sources:\n{source_text}"},
-            ],
-            "max_tokens": self.settings.nvidia_generation_max_tokens,
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "stream": False,
-        }
-        try:
-            response = self.client.post(
-                self.settings.nvidia_chat_url,
-                headers={
-                    "Authorization": f"Bearer {self.settings.nvidia_api_key}",
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            response.raise_for_status()
-            text = response.json()["choices"][0]["message"]["content"]
-        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
-            raise GroundedGenerationUnavailable("NVIDIA grounded-summary invocation failed.") from exc
-        return _validate_answer(_extract_json_text(text), {source.solution_id for source in sources})
+        allowed_solution_ids = {source.solution_id for source in sources}
+        last_invalid: GroundedGenerationInvalid | None = None
+        for retry in (False, True):
+            payload = {
+                "model": self.settings.nvidia_chat_model,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": _nvidia_user_prompt(query=query, source_text=source_text, retry=retry)},
+                ],
+                "max_tokens": self.settings.nvidia_generation_max_tokens,
+                "temperature": 0,
+                "top_p": 1,
+                "stream": False,
+                "response_format": {"type": "json_object"},
+            }
+            try:
+                response = self.client.post(
+                    self.settings.nvidia_chat_url,
+                    headers={
+                        "Authorization": f"Bearer {self.settings.nvidia_api_key}",
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                response.raise_for_status()
+                text = response.json()["choices"][0]["message"]["content"]
+            except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+                raise GroundedGenerationUnavailable("NVIDIA grounded-summary invocation failed.") from exc
+            try:
+                return _validate_answer(_extract_json_text(text), allowed_solution_ids)
+            except GroundedGenerationInvalid as exc:
+                last_invalid = exc
+        raise last_invalid or GroundedGenerationInvalid("The configured model returned an invalid grounded-summary response.")
 
 
 def create_grounded_generation_adapter(settings: Settings) -> GroundedGenerationAdapter:
@@ -154,6 +162,17 @@ def create_grounded_generation_adapter(settings: Settings) -> GroundedGeneration
     if settings.effective_ai_provider == "bedrock":
         return BedrockGroundedGenerationAdapter(settings)
     raise GroundedGenerationUnavailable("Grounded summaries are disabled until an AI provider is configured.")
+
+
+def _nvidia_user_prompt(*, query: str, source_text: str, retry: bool) -> str:
+    correction = ""
+    if retry:
+        correction = (
+            "Your previous response was rejected by validation. Return only valid JSON with exactly the keys "
+            '"summary" and "citations". Every sentence in summary must include an inline citation in square '
+            "brackets using one of the supplied solution_id values exactly, for example [solution UUID].\n\n"
+        )
+    return f"{correction}Search query:\n{query}\n\nAuthorized sources:\n{source_text}"
 
 
 def _prepare_source_text(query: str, sources: list[GroundingSource]) -> str:
@@ -203,6 +222,7 @@ def _validate_answer(raw_text: str, allowed_solution_ids: set[UUID]) -> Grounded
         raise GroundedGenerationInvalid("The configured model returned citations outside the authorized source set.")
     if summary and not citation_ids:
         raise GroundedGenerationInvalid("A grounded summary requires citations.")
-    if any(f"[{citation}]" not in summary for citation in citation_ids):
+    summary_for_citation_check = summary.lower()
+    if any(f"[{citation}]".lower() not in summary_for_citation_check for citation in citation_ids):
         raise GroundedGenerationInvalid("Grounded summary citations must appear with their claims.")
     return GroundedAnswer(summary=summary, citations=citation_ids)

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 EXCLUDED_DIRECTORIES = {
-    ".git", ".venv", ".cache", "__pycache__", "coverage", "dist", "htmlcov", "node_modules",
+    ".git", ".venv", ".cache", "__pycache__", "artifacts", "coverage", "dist", "htmlcov", "node_modules",
     ".pytest_cache", ".ruff_cache", "uploads",
 }
 EXCLUDED_FILENAMES = {".env"}
@@ -59,7 +59,7 @@ def scan_repository(root: Path) -> list[Path]:
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
+        except (OSError, UnicodeDecodeError):
             continue
         if any(pattern.search(text) for pattern in SECRET_PATTERNS) or _contains_assignment_secret(text):
             findings.append(path.relative_to(root))

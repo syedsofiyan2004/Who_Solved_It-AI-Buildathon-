@@ -1,22 +1,21 @@
-import { ArrowUpRight, Eye, Mail, ScanSearch } from "lucide-react";
+import { ArrowUpRight, Mail, ScanSearch } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { copy } from "../../content/uiCopy";
 import type { SearchResult } from "../../services/api";
-import { Button } from "../ui/Button";
 import { MatchStrength } from "./MatchStrength";
 import { SolverMiniProfile } from "./SolverMiniProfile";
 import { VerificationBadge } from "./VerificationBadge";
 
-export function SearchResultCard({ result, selected, onPreview, onSolver }: { result: SearchResult; selected?: boolean; onPreview: () => void; onSolver: () => void }) {
+export function SearchResultCard({ result, onOpen, onSolver }: { result: SearchResult; onOpen: () => void; onSolver: () => void }) {
   const verified = result.status === "verified";
   const recordId = result.solution_id.slice(0, 7);
   return (
-    <article className={`ledger-row group relative overflow-hidden rounded-[10px] ${selected ? "border-primary/55 ring-2 ring-primary/10" : ""}`}>
+    <article className="ledger-row group relative overflow-hidden rounded-[10px]">
       <span className={`ledger-rail ${verified ? "bg-success" : "bg-border-strong"}`} />
       <div className="relative grid gap-5 p-5 pl-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:p-6 lg:pl-7">
         <div className="min-w-0">
-          <button className="min-w-0 rounded-control text-left outline-none transition focus-visible:shadow-focus" onClick={onPreview} type="button">
+          <button className="min-w-0 rounded-control text-left outline-none transition focus-visible:shadow-focus" onClick={onOpen} type="button">
             <div className="mb-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">
               <span className="inline-flex items-center gap-1.5 text-brand-strong"><ScanSearch className="h-3.5 w-3.5" aria-hidden="true" />Record</span>
               <span aria-hidden="true">&middot;</span>
@@ -64,9 +63,8 @@ export function SearchResultCard({ result, selected, onPreview, onSolver }: { re
                 Contact
               </a>
             )}
-            <Button onClick={onPreview}><Eye className="h-4 w-4" aria-hidden="true" />{copy.action.previewSolution}</Button>
             <Link className="pressable inline-flex h-9 items-center justify-center gap-2 rounded-control border border-primary/25 bg-brand-soft px-3 text-sm font-medium text-brand-strong transition-colors hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm" to={`/solutions/${result.challenge_id}`} title={copy.action.openFullSolution}>
-              Open
+              {copy.action.openFullSolution}
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>

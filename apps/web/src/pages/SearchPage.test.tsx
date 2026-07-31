@@ -34,7 +34,7 @@ function HistoryControls() {
 }
 
 function renderSearch(entries = ["/search?q=Docker"], initialIndex?: number, historyControls = false) {
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={entries} initialIndex={initialIndex}><Routes><Route path="/search" element={<SearchPage />} /><Route path="*" element={<SearchPage />} /></Routes>{historyControls && <HistoryControls />}</MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={entries} initialIndex={initialIndex}><Routes><Route path="/search" element={<SearchPage />} /><Route path="/solutions/:challengeId" element={<div>Full solution route</div>} /><Route path="/people/:userId" element={<div>Full profile route</div>} /><Route path="*" element={<SearchPage />} /></Routes>{historyControls && <HistoryControls />}</MemoryRouter></QueryClientProvider>);
 }
 
 describe("SearchPage", () => {
@@ -141,16 +141,23 @@ describe("SearchPage", () => {
     expect(await screen.findByRole("heading", { name: "No reliable match was found" })).toBeInTheDocument();
   });
 
-  it("opens solution and solver panels from URL-backed state", async () => {
+  it("opens the full solution route instead of a preview panel", async () => {
     const user = userEvent.setup();
     apiMocks.searchSolutions.mockResolvedValue(response());
     renderSearch();
     expect(await screen.findByRole("heading", { name: "Docker import failure" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Preview" }));
-    expect(await screen.findByRole("dialog", { name: "Preview solution" })).toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "View solver" })[0]);
-    expect(await screen.findByRole("dialog", { name: "Solver profile" })).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: "Fictional Engineer" }).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: /Docker import failure/ }));
+    expect(await screen.findByText("Full solution route")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Preview solution" })).not.toBeInTheDocument();
+  });
+
+  it("opens the full solver profile route from result ownership", async () => {
+    const user = userEvent.setup();
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch();
+    expect(await screen.findByRole("heading", { name: "Docker import failure" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Fictional Engineer" })[0]);
+    expect(await screen.findByText("Full profile route")).toBeInTheDocument();
   });
 
   it("shows an error and retries", async () => {

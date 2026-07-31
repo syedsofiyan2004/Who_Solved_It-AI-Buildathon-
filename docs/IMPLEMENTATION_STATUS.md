@@ -45,6 +45,8 @@
 | AI disabled | Keyword and exact-error search remains available |
 | NVIDIA or Bedrock | Semantic embeddings and grounded summaries when the selected provider is configured |
 
+Current local NVIDIA generation default is `openai/gpt-oss-20b` with generation output limited through `NVIDIA_GENERATION_MAX_TOKENS` instead of hardcoded adapter values. Grounded generation validates cited JSON output and retries once when provider output is malformed.
+
 ## Known showcase boundaries
 
 - Attachments remain private and scan-pending because no external malware scanner is included.
@@ -56,11 +58,11 @@
 
 - `docker compose exec -T api alembic upgrade head` passed.
 - `docker compose exec -T api ruff check .` passed.
-- `docker compose exec -T api pytest` passed: 47 tests.
+- `docker compose exec -T api pytest` passed: 49 tests.
 - `docker compose exec -T api python scripts/seed_dev.py` passed and generated 679 synthetic records.
 - `docker compose exec -T api python scripts/check_seed_quality.py` passed.
 - `docker compose exec -T web npm run typecheck` passed.
-- `docker compose exec -T web npm test` passed: 20 tests.
+- `docker compose exec -T web npm test` passed: 21 tests.
 - `docker compose exec -T web npm run build` passed.
 - `python apps\api\scripts\scan_secrets.py .` passed.
 - `python apps\api\scripts\package_source.py --output artifacts\knowledge-platform-source.zip` passed.
@@ -68,3 +70,4 @@
 - Browser visual smoke test passed for login and `http://localhost:5173/search?q=CrashLoopBackOff`: 10 ledger rows rendered, the grounded-summary action remained available as an explicit opt-in, no search error state appeared, no mojibake replacement characters appeared, and no `backdrop-blur` classes were present.
 - Desktop shell regression check passed at a 1440px viewport: the sidebar remains fixed at the top-left and no longer pushes the top bar/content downward.
 - Search UI polish regression checks passed: grounded-summary UUID citations render as readable source markers, the summary action is no longer sticky during result scrolling, and filters open only on demand from the result toolbar.
+- Search-result opening now routes directly to the full solution/profile pages instead of opening the right-side preview panel. Frontend source scan found no `Â` mojibake separators or sticky preview footers.

@@ -36,14 +36,16 @@ export function SolverProfilePanel({ profile, onClose }: { profile: EmployeeProf
           {profile.verified_solutions.slice(0, 4).map((solution) => (
             <Link className="group block rounded-app border border-border bg-surface p-3.5 text-sm transition-all hover:border-border-strong hover:shadow-sm" key={solution.solution_id} to={`/solutions/${solution.challenge_id}`}>
               <span className="flex items-start justify-between gap-3"><span className="font-medium leading-5 text-text group-hover:text-brand-strong">{solution.title}</span><ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" /></span>
-              <span className="mt-2 block text-xs text-text-muted">{solution.technologies.join(" Â- ")}</span>
+              <span className="mt-2 block text-xs text-text-muted">
+                {solution.technologies.map((technology, index) => <span key={`${solution.solution_id}-${technology}`}>{index > 0 && <span aria-hidden="true"> · </span>}{technology}</span>)}
+              </span>
             </Link>
           ))}
           {profile.verified_solutions.length === 0 && <p className="rounded-app border border-dashed border-border p-4 text-sm text-text-muted">{copy.profile.emptySolutions}</p>}
         </div>
       </section>
 
-      <div className="sticky bottom-0 -mx-5 flex flex-wrap gap-2 border-t border-border bg-elevated px-5 pb-1 pt-4">
+      <div className="-mx-5 flex flex-wrap gap-2 border-t border-border bg-elevated px-5 pb-1 pt-4">
         <a className="inline-flex h-9 items-center justify-center gap-2 rounded-control border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-accent-hover" href={`mailto:${profile.contact_email}`}>
           <Mail className="h-4 w-4" aria-hidden="true" />{copy.action.contactSolver}
         </a>

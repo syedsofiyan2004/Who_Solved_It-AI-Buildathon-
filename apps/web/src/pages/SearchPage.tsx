@@ -1,19 +1,15 @@
 ﻿import { useQuery } from "@tanstack/react-query";
-import type { UseQueryResult } from "@tanstack/react-query";
 import { AlertCircle, ChevronLeft, ChevronRight, Filter, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { DetailSheet } from "../components/product/DetailSheet";
 import { SearchResultCard } from "../components/product/SearchResultCard";
-import { SolutionPreviewPanel } from "../components/product/SolutionPreviewPanel";
-import { SolverProfilePanel } from "../components/product/SolverProfilePanel";
 import { Button } from "../components/ui/Button";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { StatePanel } from "../components/ui/StatePanel";
 import { copy } from "../content/uiCopy";
-import { getEmployeeProfile, listTechnologies, searchSolutions, type EmployeeProfile, type SearchResult } from "../services/api";
+import { listTechnologies, searchSolutions, type SearchResult } from "../services/api";
 
 type Sort = "relevance" | "newest";
 
@@ -26,8 +22,6 @@ export function SearchPage() {
   const verifiedOnly = verification ? verification !== "all" : params.get("verified") !== "false";
   const sort: Sort = params.get("sort") === "newest" ? "newest" : "relevance";
   const includeSummary = params.get("summary") === "true";
-  const selectedSolutionId = params.get("solution");
-  const selectedSolverId = params.get("solver");
   const selectedTechnologyValues = params.getAll("technology");
   const [input, setInput] = useState(query);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -66,30 +60,15 @@ export function SearchPage() {
   });
 
   const response = resultQuery.data;
-  const selectedResult = response?.data.results.find((result) => result.challenge_id === selectedSolutionId || result.solution_id === selectedSolutionId) ?? null;
-  const activeSolverId = selectedSolverId ?? selectedResult?.solver.user_id ?? null;
-  const detailPanelOpen = Boolean(selectedResult || selectedSolverId);
-  const gridColumns = filtersOpen
-    ? detailPanelOpen
-      ? "xl:grid-cols-[260px_minmax(0,1fr)_440px]"
-      : "lg:grid-cols-[260px_minmax(0,1fr)]"
-    : detailPanelOpen
-      ? "xl:grid-cols-[minmax(0,1fr)_440px]"
-      : "";
-  const solver = useQuery({
-    queryKey: ["employee-profile", activeSolverId],
-    queryFn: () => getEmployeeProfile(activeSolverId ?? ""),
-    enabled: Boolean(selectedSolverId && activeSolverId),
-    staleTime: 5 * 60 * 1000,
-  });
+  const gridColumns = filtersOpen ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "";
 
   useEffect(() => setInput(query), [query]);
   useEffect(() => {
-    if (!response || selectedSolutionId || selectedSolverId) return;
+    if (!response) return;
     const saved = Number(window.sessionStorage.getItem(workspaceKey) ?? "0");
     if (Number.isFinite(saved) && saved > 0) window.requestAnimationFrame(() => window.scrollTo({ top: saved }));
     return () => window.sessionStorage.setItem(workspaceKey, String(window.scrollY));
-  }, [workspaceKey, response, selectedSolutionId, selectedSolverId]);
+  }, [workspaceKey, response]);
 
   const rememberScroll = () => window.sessionStorage.setItem(workspaceKey, String(window.scrollY));
   const setSearch = (changes: Record<string, string | string[] | undefined>) => {
@@ -109,10 +88,8 @@ export function SearchPage() {
     if (normalized.length >= 3) setSearch({ q: normalized, page: undefined, solution: undefined, solver: undefined });
   };
   const clear = () => { setInput(""); navigate("/search", { preventScrollReset: true }); };
-  const closeSolution = () => setSearch({ solution: undefined, solver: undefined });
-  const closeSolver = () => setSearch({ solver: undefined });
-  const openSolution = (result: SearchResult) => setSearch({ solution: result.challenge_id, solver: undefined });
-  const openSolver = (result: SearchResult) => setSearch({ solution: result.challenge_id, solver: result.solver.user_id });
+  const openSolution = (result: SearchResult) => navigate(`/solutions/${result.challenge_id}`);
+  const openSolver = (result: SearchResult) => navigate(`/people/${result.solver.user_id}`);
   const setTechnology = (value: string, enabled: boolean) => {
     const values = enabled ? [...selectedTechnologyValues, value] : selectedTechnologyValues.filter((item) => item !== value);
     setSearch({ technology: Array.from(new Set(values)), page: undefined, solution: undefined, solver: undefined });
@@ -159,19 +136,10 @@ export function SearchPage() {
             {resultQuery.isLoading && <LoadingSkeleton rows={5} />}
             {resultQuery.isError && <StatePanel kind="error" onRetry={() => void resultQuery.refetch()} />}
             {response && <SearchContextPanel response={response} query={query} selectedTechnologyValues={selectedTechnologyValues} />}
-            {response && <SearchResults reduceMotion={reduceMotion} response={response} selectedSolutionId={selectedSolutionId} onPage={(nextPage) => setSearch({ page: String(nextPage), solution: undefined, solver: undefined })} onPreview={openSolution} onSolver={openSolver} />}
+            {response && <SearchResults reduceMotion={reduceMotion} response={response} onPage={(nextPage) => setSearch({ page: String(nextPage) })} onOpen={openSolution} onSolver={openSolver} />}
           </section>
-
-          {(selectedResult || selectedSolverId) && (
-            <aside className="premium-panel hidden min-w-0 rounded-[18px] p-5 xl:sticky xl:top-[96px] xl:block xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto">
-              <PanelContent selectedResult={selectedResult} selectedSolverId={selectedSolverId} solver={solver} onCloseSolution={closeSolution} onCloseSolver={closeSolver} onSolver={() => selectedResult && openSolver(selectedResult)} />
-            </aside>
-          )}
         </div>
       )}
-
-      {selectedResult && !selectedSolverId && <DetailSheet title={copy.search.preview} onClose={closeSolution}><SolutionPreviewPanel result={selectedResult} onClose={closeSolution} onSolver={() => openSolver(selectedResult)} /></DetailSheet>}
-      {selectedSolverId && <DetailSheet title={copy.detail.solverProfile} onClose={closeSolver}><SolverContent solver={solver} onClose={closeSolver} /></DetailSheet>}
     </div>
   );
 }
@@ -299,7 +267,7 @@ function extractQueryHints(query: string, selectedTechnologyValues: string[]) {
   return Array.from(new Set([...errorTerms, ...selectedTechnologyValues, ...longTerms])).slice(0, 6);
 }
 
-function SearchResults({ reduceMotion, response, selectedSolutionId, onPreview, onSolver, onPage }: { reduceMotion: boolean | null; response: Awaited<ReturnType<typeof searchSolutions>>; selectedSolutionId: string | null; onPreview: (result: SearchResult) => void; onSolver: (result: SearchResult) => void; onPage: (page: number) => void }) {
+function SearchResults({ reduceMotion, response, onOpen, onSolver, onPage }: { reduceMotion: boolean | null; response: Awaited<ReturnType<typeof searchSolutions>>; onOpen: (result: SearchResult) => void; onSolver: (result: SearchResult) => void; onPage: (page: number) => void }) {
   const { data, meta } = response;
   if (data.no_answer) return <section className="product-card rounded-[20px] px-6 py-10 text-center"><h2 className="text-lg font-semibold">{copy.search.noAnswerTitle}</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-text-muted">{copy.search.noAnswerBody}</p></section>;
   return <>
@@ -344,25 +312,12 @@ function SearchResults({ reduceMotion, response, selectedSolutionId, onPreview, 
             visible: { opacity: 1, transition: { duration: 0.18, ease: "easeOut" }, y: 0 },
           }}
         >
-          <SearchResultCard result={result} selected={selectedSolutionId === result.challenge_id || selectedSolutionId === result.solution_id} onPreview={() => onPreview(result)} onSolver={() => onSolver(result)} />
+          <SearchResultCard result={result} onOpen={() => onOpen(result)} onSolver={() => onSolver(result)} />
         </motion.div>
       ))}
     </motion.div>
     <div className="product-card mt-6 flex items-center justify-between rounded-app px-3 py-2"><Button disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)}><ChevronLeft className="h-4 w-4" />{copy.search.previousPage}</Button><span className="text-xs text-text-muted">Page {meta.page}</span><Button disabled={!meta.has_next} onClick={() => onPage(meta.page + 1)}>{copy.search.nextPage}<ChevronRight className="h-4 w-4" /></Button></div>
   </>;
-}
-
-function PanelContent({ selectedResult, selectedSolverId, solver, onCloseSolution, onCloseSolver, onSolver }: { selectedResult: SearchResult | null; selectedSolverId: string | null; solver: UseQueryResult<EmployeeProfile, Error>; onCloseSolution: () => void; onCloseSolver: () => void; onSolver: () => void }) {
-  if (selectedSolverId) return <SolverContent solver={solver} onClose={onCloseSolver} />;
-  if (selectedResult) return <SolutionPreviewPanel result={selectedResult} onClose={onCloseSolution} onSolver={onSolver} />;
-  return <StatePanel kind="notFound" />;
-}
-
-function SolverContent({ solver, onClose }: { solver: UseQueryResult<EmployeeProfile, Error>; onClose: () => void }) {
-  if (solver.isLoading) return <LoadingSkeleton rows={5} />;
-  if (solver.isError) return <StatePanel kind="error" onRetry={() => void solver.refetch()} />;
-  if (!solver.data) return <StatePanel kind="notFound" />;
-  return <SolverProfilePanel profile={solver.data} onClose={onClose} />;
 }
 
 function parsePositiveInteger(value: string | null) {

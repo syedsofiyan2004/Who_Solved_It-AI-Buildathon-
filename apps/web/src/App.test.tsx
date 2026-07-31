@@ -207,7 +207,7 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "You do not have access to this content" })).toBeInTheDocument();
   });
 
-  it("runs keyword search and opens a result preview", async () => {
+  it("runs keyword search and opens the full solution", async () => {
     const user = userEvent.setup();
     renderApp("/search");
     await signIn(user);
@@ -215,7 +215,8 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Search" }));
     expect(await screen.findByRole("heading", { name: "Container startup failure" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Container startup failure/ }));
-    expect(screen.getByRole("dialog", { name: "Preview solution" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Docker import failure" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Preview solution" })).not.toBeInTheDocument();
   });
 
   it("keeps a typed draft separate from the applied search query", async () => {
