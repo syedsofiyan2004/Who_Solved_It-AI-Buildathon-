@@ -45,7 +45,7 @@
 | AI disabled | Keyword and exact-error search remains available |
 | NVIDIA or Bedrock | Semantic embeddings and grounded summaries when the selected provider is configured |
 
-Current local NVIDIA generation default is `openai/gpt-oss-20b` with generation output limited through `NVIDIA_GENERATION_MAX_TOKENS` instead of hardcoded adapter values. Grounded generation validates cited JSON output and retries once when provider output is malformed.
+Current local NVIDIA generation default is `openai/gpt-oss-120b` with generation output limited through `NVIDIA_GENERATION_MAX_TOKENS` and provider timeout controlled through `NVIDIA_TIMEOUT_SECONDS`. Grounded generation validates cited JSON output, retries once when provider output is malformed, and repairs missing inline citation markers when the model supplies valid source IDs.
 
 ## Known showcase boundaries
 

@@ -99,10 +99,43 @@ describe("SearchPage", () => {
       service_status: { keyword_search: "available", semantic_search: "available", grounded_summary: "available" },
     }));
     renderSearch(["/search?q=Lambda%20API&summary=true"]);
-    expect(await screen.findByText("Source 1")).toBeInTheDocument();
-    expect(screen.getByText("Source 2")).toBeInTheDocument();
+    expect(await screen.findByText("Verified fix 7798fd48")).toBeInTheDocument();
+    expect(screen.getByText("Verified fix f9477aa9")).toBeInTheDocument();
+    expect(screen.queryByText("Source 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Source 2")).not.toBeInTheDocument();
     expect(screen.queryByText(firstCitation, { exact: false })).not.toBeInTheDocument();
     expect(screen.queryByText(secondCitation, { exact: false })).not.toBeInTheDocument();
+  });
+
+  it("clears grounded summary when submitting a normal search", async () => {
+    const user = userEvent.setup();
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch(["/search?q=Lambda%20API&summary=true"]);
+    expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Lambda API");
+    expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({ include_summary: true }));
+
+    const input = screen.getByDisplayValue("Lambda API");
+    await user.clear(input);
+    await user.type(input, "Terraform state lock");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+
+    await waitFor(() => expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({
+      query: "Terraform state lock",
+      include_summary: false,
+    })));
+    expect(screen.getByRole("button", { name: "Generate grounded summary" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("requests grounded summary only from the explicit summary button", async () => {
+    const user = userEvent.setup();
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch(["/search?q=Terraform"]);
+    expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Terraform");
+    expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({ include_summary: false }));
+
+    await user.click(screen.getByRole("button", { name: "Generate grounded summary" }));
+
+    await waitFor(() => expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({ include_summary: true })));
   });
 
   it("preserves technology filters from the URL", async () => {

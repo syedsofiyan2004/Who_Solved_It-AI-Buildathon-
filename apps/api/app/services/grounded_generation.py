@@ -121,7 +121,7 @@ class NvidiaGroundedGenerationAdapter:
     def generate(self, *, query: str, sources: list[GroundingSource]) -> GroundedAnswer:
         source_text = _prepare_source_text(query, sources)
         allowed_solution_ids = {source.solution_id for source in sources}
-        last_invalid: GroundedGenerationInvalid | None = None
+        last_text: str | None = None
         for retry in (False, True):
             payload = {
                 "model": self.settings.nvidia_chat_model,
@@ -147,13 +147,23 @@ class NvidiaGroundedGenerationAdapter:
                 )
                 response.raise_for_status()
                 text = response.json()["choices"][0]["message"]["content"]
+                last_text = text
             except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
                 raise GroundedGenerationUnavailable("NVIDIA grounded-summary invocation failed.") from exc
             try:
                 return _validate_answer(_extract_json_text(text), allowed_solution_ids)
-            except GroundedGenerationInvalid as exc:
-                last_invalid = exc
-        raise last_invalid or GroundedGenerationInvalid("The configured model returned an invalid grounded-summary response.")
+            except GroundedGenerationInvalid:
+                pass
+        if last_text is not None:
+            try:
+                return _validate_answer(_extract_json_text(last_text), allowed_solution_ids, repair_missing_inline_citations=True)
+            except GroundedGenerationInvalid:
+                pass
+        # Keep safety strict: never show invalid provider text. Some free/provider-hosted
+        # chat models ignore JSON or inline UUID citation instructions even after retry.
+        # In that case, build a compact extractive answer from the same authorized
+        # technical records so the user still receives grounded context.
+        return _build_extractive_grounded_answer(query=query, sources=sources)
 
 
 def create_grounded_generation_adapter(settings: Settings) -> GroundedGenerationAdapter:
@@ -187,6 +197,90 @@ def _prepare_source_text(query: str, sources: list[GroundingSource]) -> str:
     return source_text
 
 
+def _build_extractive_grounded_answer(*, query: str, sources: list[GroundingSource]) -> GroundedAnswer:
+    if not sources:
+        raise GroundedGenerationInvalid("No permitted source records are available for grounding.")
+    _assert_safe_embedding_content(query)
+    selected_sources = [
+        source
+        for source in sources[:3]
+        if _document_field(source.technical_document, "Root cause") or _document_field(source.technical_document, "Resolution")
+    ]
+    if not selected_sources:
+        raise GroundedGenerationInvalid("No permitted source records are available for grounding.")
+    root_causes = _unique_cleaned(_document_field(source.technical_document, "Root cause") for source in selected_sources)
+    resolution_steps = _unique_cleaned(
+        step
+        for source in selected_sources
+        for step in _document_field(source.technical_document, "Resolution").split("|")
+    )
+    titles = _unique_cleaned(_document_field(source.technical_document, "Title") for source in selected_sources)
+    issue_label = _summarize_issue_label(query, titles)
+    root_clause = root_causes[0] if root_causes else "the retrieved records point to a documented configuration or runtime mismatch"
+    step_clause = _join_human_list(resolution_steps[:3]) if resolution_steps else "review the matching runbooks and apply the verified remediation steps"
+    primary_citation = selected_sources[0].solution_id
+    summary = (
+        f"For {issue_label}, the verified fixes point to this root cause: {_clean_sentence(root_clause)}. "
+        f"The recommended path is to {step_clause}. "
+        f"Use the cited verified fixes below for the exact environment-specific runbook. [{primary_citation}]"
+    )
+    payload = {
+        "summary": summary,
+        "citations": [str(primary_citation)],
+    }
+    _assert_safe_embedding_content(payload["summary"])
+    return _validate_answer(json.dumps(payload), {source.solution_id for source in sources})
+
+
+def _document_field(document: str, field_name: str) -> str:
+    prefix = f"{field_name}:"
+    for line in document.splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix):].strip()
+    return ""
+
+
+def _first_resolution_step(value: str) -> str:
+    return value.split("|", 1)[0].strip()
+
+
+def _clean_sentence(value: str) -> str:
+    return " ".join(value.split()).strip().rstrip(".")
+
+
+def _unique_cleaned(values) -> list[str]:
+    seen: set[str] = set()
+    cleaned_values: list[str] = []
+    for value in values:
+        cleaned = _clean_sentence(value)
+        key = cleaned.lower()
+        if cleaned and key not in seen:
+            seen.add(key)
+            cleaned_values.append(cleaned)
+    return cleaned_values
+
+
+def _join_human_list(values: list[str]) -> str:
+    normalized = [_clean_sentence(value) for value in values if _clean_sentence(value)]
+    if not normalized:
+        return ""
+    lowered = [value[0].lower() + value[1:] if value and value[0].isupper() else value for value in normalized]
+    if len(lowered) == 1:
+        return lowered[0]
+    if len(lowered) == 2:
+        return f"{lowered[0]} and {lowered[1]}"
+    return f"{', '.join(lowered[:-1])}, and {lowered[-1]}"
+
+
+def _summarize_issue_label(query: str, titles: list[str]) -> str:
+    query_label = _clean_sentence(query)
+    if query_label:
+        return f"“{query_label}”"
+    if titles:
+        return f"“{titles[0]}”"
+    return "this search"
+
+
 def _extract_json_text(value: object) -> str:
     if not isinstance(value, str):
         raise GroundedGenerationInvalid("The configured model returned an invalid grounded-summary response.")
@@ -203,7 +297,7 @@ def _extract_json_text(value: object) -> str:
     return text[start : end + 1] if start >= 0 and end > start else text
 
 
-def _validate_answer(raw_text: str, allowed_solution_ids: set[UUID]) -> GroundedAnswer:
+def _validate_answer(raw_text: str, allowed_solution_ids: set[UUID], *, repair_missing_inline_citations: bool = False) -> GroundedAnswer:
     try:
         payload = json.loads(raw_text)
         summary = payload["summary"]
@@ -222,7 +316,18 @@ def _validate_answer(raw_text: str, allowed_solution_ids: set[UUID]) -> Grounded
         raise GroundedGenerationInvalid("The configured model returned citations outside the authorized source set.")
     if summary and not citation_ids:
         raise GroundedGenerationInvalid("A grounded summary requires citations.")
+    if summary and repair_missing_inline_citations:
+        summary = _append_missing_inline_citations(summary, citation_ids)
     summary_for_citation_check = summary.lower()
     if any(f"[{citation}]".lower() not in summary_for_citation_check for citation in citation_ids):
         raise GroundedGenerationInvalid("Grounded summary citations must appear with their claims.")
     return GroundedAnswer(summary=summary, citations=citation_ids)
+
+
+def _append_missing_inline_citations(summary: str, citation_ids: list[UUID]) -> str:
+    normalized = summary.strip()
+    lower_summary = normalized.lower()
+    missing = [citation for citation in citation_ids if f"[{citation}]".lower() not in lower_summary]
+    if not missing:
+        return normalized
+    return f"{normalized.rstrip()} {' '.join(f'[{citation}]' for citation in missing)}"

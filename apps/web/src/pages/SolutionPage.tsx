@@ -38,7 +38,7 @@ export function SolutionPage() {
       <section className="ledger-row relative overflow-hidden rounded-[14px] px-5 py-6 sm:px-8 sm:py-8">
         <span className={`ledger-rail ${isVerified ? "bg-success" : "bg-border-strong"}`} />
         <div className="relative max-w-4xl pl-2">
-          <p className="font-data text-[10px] uppercase tracking-[0.12em] text-text-muted">Record &middot; #{item.id.slice(0, 7)}</p>
+          <p className="font-data text-[10px] uppercase tracking-[0.12em] text-text-muted">Solution detail</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="status-chip inline-flex items-center rounded-control border border-border px-2 py-1 uppercase text-text-muted">{item.status.replace(/_/g, " ")}</span>
             <span className="status-chip inline-flex items-center rounded-control border border-border px-2 py-1 uppercase text-text-muted">{item.visibility}</span>

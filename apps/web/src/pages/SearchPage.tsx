@@ -1,7 +1,7 @@
 ﻿import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, ChevronLeft, ChevronRight, Filter, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { SearchResultCard } from "../components/product/SearchResultCard";
@@ -85,7 +85,9 @@ export function SearchPage() {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const normalized = input.trim();
-    if (normalized.length >= 3) setSearch({ q: normalized, page: undefined, solution: undefined, solver: undefined });
+    if (normalized.length >= 3) {
+      setSearch({ q: normalized, page: undefined, solution: undefined, solver: undefined, summary: undefined });
+    }
   };
   const clear = () => { setInput(""); navigate("/search", { preventScrollReset: true }); };
   const openSolution = (result: SearchResult) => navigate(`/solutions/${result.challenge_id}`);
@@ -114,7 +116,7 @@ export function SearchPage() {
         </div>
       </section>
 
-      {!validQuery && <EmptySearch onSearch={(value) => { setInput(value); setSearch({ q: value }); }} />}
+      {!validQuery && <EmptySearch onSearch={(value) => { setInput(value); setSearch({ q: value, summary: undefined }); }} />}
 
       {validQuery && (
         <div className={`grid gap-6 ${gridColumns}`}>
@@ -159,14 +161,14 @@ function EmptySearch({ onSearch }: { onSearch: (value: string) => void }) {
       <div aria-hidden="true" className="ledger-row rounded-[10px] p-4 opacity-90">
         <span className="ledger-rail bg-success" />
         <div className="pl-2">
-          <p className="font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">Record - #f21c9a0</p>
+          <p className="font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">Example verified fix</p>
           <p className="mt-1.5 font-display text-sm font-semibold text-text">CrashLoopBackOff on payments-api</p>
           <p className="mt-2 line-clamp-2 text-xs leading-5 text-text-muted">Liveness probe timed out during cold start after the base image bump...</p>
           <div className="mt-3 flex items-center gap-2">
             <span className="status-chip inline-flex items-center gap-1 rounded-control border border-success/40 bg-success/[0.07] px-2 py-1 uppercase text-success">Verified</span>
           </div>
           <div className="mt-3 flex items-center gap-1.5 border-t border-dashed border-border pt-3 text-xs text-text-muted">
-            <span className="font-data text-text-muted/70">blame ?</span>
+            <span className="font-data text-text-muted/70">Solved by</span>
             <span className="font-medium text-text">this is what a result looks like</span>
           </div>
         </div>
@@ -231,30 +233,20 @@ function EvidenceTile({ body, label, value }: { body: string; label: string; val
   return <div className="rounded-app border border-border bg-surface/80 px-3 py-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">{label}</p><p className="mt-1 text-lg font-semibold tracking-[-0.03em] text-text">{value}</p><p className="mt-1 text-[11px] leading-5 text-text-muted">{body}</p></div>;
 }
 
-const UUID_CITATION_PATTERN = /\[([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\]/gi;
+const UUID_CITATION_PATTERN = /\s*\[([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\]/gi;
 
-function GroundedSummaryText({ citations, summary }: { citations: string[]; summary: string }) {
-  const citationOrder = new Map(citations.map((citation, index) => [citation.toLowerCase(), index + 1]));
-  const parts: ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
+function GroundedSummaryText({ summary }: { summary: string }) {
+  const visibleSummary = summary.replace(UUID_CITATION_PATTERN, "").replace(/\s{2,}/g, " ").trim();
+  return <p className="mt-3 max-w-3xl text-[15px] leading-7 text-text">{visibleSummary}</p>;
+}
 
-  UUID_CITATION_PATTERN.lastIndex = 0;
-  while ((match = UUID_CITATION_PATTERN.exec(summary)) !== null) {
-    if (match.index > lastIndex) parts.push(summary.slice(lastIndex, match.index));
-    const citationNumber = citationOrder.get(match[1].toLowerCase());
-    if (citationNumber) {
-      parts.push(
-        <sup className="mx-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-surface px-1 font-data text-[10px] font-semibold leading-none text-brand-strong" key={`${match[1]}-${match.index}`}>
-          {citationNumber}
-        </sup>,
-      );
-    }
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < summary.length) parts.push(summary.slice(lastIndex));
-
-  return <p className="mt-3 max-w-3xl text-[15px] leading-7 text-text">{parts}</p>;
+function CitationChip({ citation, results }: { citation: string; results: SearchResult[] }) {
+  const citedResult = results.find((result) => result.solution_id.toLowerCase() === citation.toLowerCase());
+  return (
+    <span className="max-w-full truncate rounded-control border border-primary/20 bg-surface px-2 py-1 font-data text-[10px] text-brand-strong" title={citedResult ? citation : undefined}>
+      {citedResult ? citedResult.title : `Verified fix ${citation.slice(0, 8)}`}
+    </span>
+  );
 }
 
 function extractQueryHints(query: string, selectedTechnologyValues: string[]) {
@@ -283,12 +275,12 @@ function SearchResults({ reduceMotion, response, onOpen, onSolver, onPage }: { r
           <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-primary to-brand-strong" />
           <div className="relative pl-2">
             <div className="flex items-center gap-2 font-data text-[11px] uppercase tracking-[0.14em] text-brand-strong"><Sparkles className="h-3.5 w-3.5" />{copy.search.summary} - grounded in the records below</div>
-            <GroundedSummaryText citations={data.summary_citations} summary={data.summary} />
+            <GroundedSummaryText summary={data.summary} />
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">{copy.search.sources}</span>
-              {data.summary_citations.map((citation, index) => <code className="max-w-full truncate rounded-control border border-primary/20 bg-surface px-2 py-1 font-data text-[10px] text-brand-strong" key={citation} title={citation}>Source {index + 1}</code>)}
+              {data.summary_citations.map((citation) => <CitationChip citation={citation} key={citation} results={data.results} />)}
             </div>
-            <p className="mt-3 text-[11px] leading-5 text-text-muted">Generated only from the authorized solutions on this page. Ownership, contact details, and verification status always come from the records themselves, never from the model.</p>
+            <p className="mt-3 text-[11px] leading-5 text-text-muted">Generated only from authorized technical solution content. Ownership, contact details, and verification status always come from the records themselves, never from the model.</p>
           </div>
         </motion.section>
       )}

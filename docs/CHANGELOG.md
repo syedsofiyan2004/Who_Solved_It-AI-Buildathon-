@@ -139,7 +139,7 @@ All notable project changes are documented here. The format is intentionally lig
 
 - Rebranded the showcase product as **Minfy Resolve** and retained a local-only Docker architecture with no AWS deployment requirement.
 - Added NVIDIA-hosted AI adapters for semantic embeddings and grounded summaries while preserving keyword/exact-error search when AI is unavailable.
-- Configured `nvidia/nemotron-3-embed-1b` for query/passage embeddings and `moonshotai/kimi-k2.6` for grounded summaries.
+- Configured `nvidia/nemotron-3-embed-1b` for query/passage embeddings and `openai/gpt-oss-120b` for grounded summaries.
 - Replaced the small fictional seed with an idempotent original synthetic corpus containing 43 supplied employee profiles, 49 technologies, 53 incident blueprints, seven environments, and 371 solution records.
 - Added Cloud/DevOps, SREaaS, Intelligent Data Applications, AI/Data Science, leadership, management, and People Operations profiles with temporary showcase email conventions.
 - Redesigned the authenticated UI into a premium connected product shell with responsive navigation, semantic light/dark themes, a product home, expert directory, and technical reading views.

@@ -37,11 +37,11 @@ class Settings(BaseSettings):
 
     nvidia_api_key: str = Field(default="", alias="NVIDIA_API_KEY")
     nvidia_chat_url: str = Field(default="https://integrate.api.nvidia.com/v1/chat/completions", alias="NVIDIA_CHAT_URL")
-    nvidia_chat_model: str = Field(default="openai/gpt-oss-20b", alias="NVIDIA_CHAT_MODEL")
+    nvidia_chat_model: str = Field(default="openai/gpt-oss-120b", alias="NVIDIA_CHAT_MODEL")
     nvidia_embedding_url: str = Field(default="https://integrate.api.nvidia.com/v1/embeddings", alias="NVIDIA_EMBEDDING_URL")
     nvidia_embedding_model: str = Field(default="nvidia/nemotron-3-embed-1b", alias="NVIDIA_EMBEDDING_MODEL")
     nvidia_embedding_dimensions: int | None = Field(default=2048, ge=1, le=8192, alias="NVIDIA_EMBEDDING_DIMENSIONS")
-    nvidia_timeout_seconds: float = Field(default=45.0, ge=5.0, le=180.0, alias="NVIDIA_TIMEOUT_SECONDS")
+    nvidia_timeout_seconds: float = Field(default=120.0, ge=5.0, le=180.0, alias="NVIDIA_TIMEOUT_SECONDS")
     nvidia_generation_max_tokens: int = Field(default=1024, ge=64, le=4096, alias="NVIDIA_GENERATION_MAX_TOKENS")
 
     rag_max_context_solutions: int = Field(default=4, ge=1, le=8, alias="RAG_MAX_CONTEXT_SOLUTIONS")

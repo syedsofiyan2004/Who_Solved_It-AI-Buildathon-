@@ -9,7 +9,6 @@ import { VerificationBadge } from "./VerificationBadge";
 
 export function SearchResultCard({ result, onOpen, onSolver }: { result: SearchResult; onOpen: () => void; onSolver: () => void }) {
   const verified = result.status === "verified";
-  const recordId = result.solution_id.slice(0, 7);
   return (
     <article className="ledger-row group relative overflow-hidden rounded-[10px]">
       <span className={`ledger-rail ${verified ? "bg-success" : "bg-border-strong"}`} />
@@ -17,9 +16,7 @@ export function SearchResultCard({ result, onOpen, onSolver }: { result: SearchR
         <div className="min-w-0">
           <button className="min-w-0 rounded-control text-left outline-none transition focus-visible:shadow-focus" onClick={onOpen} type="button">
             <div className="mb-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-data text-[10px] uppercase tracking-[0.1em] text-text-muted">
-              <span className="inline-flex items-center gap-1.5 text-brand-strong"><ScanSearch className="h-3.5 w-3.5" aria-hidden="true" />Record</span>
-              <span aria-hidden="true">&middot;</span>
-              <span>#{recordId}</span>
+              <span className="inline-flex items-center gap-1.5 text-brand-strong"><ScanSearch className="h-3.5 w-3.5" aria-hidden="true" />Verified fix</span>
             </div>
             <h2 className="font-display text-[17px] font-semibold leading-6 tracking-[-0.01em] text-text transition-colors group-hover:text-brand-strong">{result.title}</h2>
             <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-text-muted">{result.problem_excerpt}</p>
@@ -40,11 +37,10 @@ export function SearchResultCard({ result, onOpen, onSolver }: { result: SearchR
           </div>
 
           <div className="mt-4 flex items-center gap-2 border-t border-dashed border-border pt-3 text-xs text-text-muted">
-            <span aria-hidden="true" className="font-data text-text-muted/70">blame &rarr;</span>
+            <span aria-hidden="true" className="font-data text-text-muted/70">Solved by</span>
             <button className="font-medium text-text underline decoration-border decoration-1 underline-offset-2 hover:text-brand-strong hover:decoration-brand-strong" onClick={onSolver} type="button">
               {result.solver.display_name}
             </button>
-            <span className="text-text-muted">solved this</span>
           </div>
         </div>
 

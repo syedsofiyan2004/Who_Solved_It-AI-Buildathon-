@@ -28,7 +28,7 @@ Default NVIDIA models:
 
 ```text
 Embedding: nvidia/nemotron-3-embed-1b
-Chat: moonshotai/kimi-k2.6
+Chat: openai/gpt-oss-120b
 ```
 
 ## Finalization boundary
