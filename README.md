@@ -211,7 +211,7 @@ The MVP includes:
 - no AWS credentials in source code;
 - safe source packaging.
 
-## Current review build status
+## Current buildathon status
 
 Implemented locally:
 
@@ -240,7 +240,7 @@ The local database may contain a higher total count if older records were intent
 
 ## Local runtime
 
-The application runs locally through Docker Compose. Reviewers need Docker Desktop and one NVIDIA API key for semantic retrieval and grounded summaries.
+The application runs locally through Docker Compose. Evaluators need Docker Desktop and one NVIDIA API key for semantic retrieval and grounded summaries.
 
 ### 1. Create the local environment file
 
