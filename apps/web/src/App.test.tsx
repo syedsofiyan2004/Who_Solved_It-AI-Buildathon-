@@ -2,10 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 import { AuthProvider } from "./auth/AuthProvider";
+import { setAccessToken } from "./auth/token";
 import { createChallenge, updateMyProfile } from "./services/api";
 
 vi.mock("./services/api", () => ({
@@ -179,13 +180,19 @@ function renderApp(path = "/dashboard") {
 }
 
 async function signIn(user: ReturnType<typeof userEvent.setup>, role: "employee" | "reviewer" = "employee") {
-  if (role === "reviewer") {
-    await user.click(screen.getByRole("button", { name: /Srikar Deshmukh/ }));
-  }
+  const email = role === "reviewer" ? "srikar.deshmukh@minfytech.com" : "syed.sofiyan@minfytech.com";
+  await user.type(screen.getByLabelText("Work email"), email);
+  await user.type(screen.getByLabelText("Password"), "development-only-password");
   await user.click(screen.getByRole("button", { name: "Sign in" }));
 }
 
 describe("App", () => {
+  beforeEach(() => {
+    setAccessToken(null);
+    window.sessionStorage.clear();
+    vi.clearAllMocks();
+  });
+
   it("redirects unauthenticated users to login", () => {
     renderApp();
     expect(screen.getByRole("heading", { name: "Sign in to the knowledge platform" })).toBeInTheDocument();

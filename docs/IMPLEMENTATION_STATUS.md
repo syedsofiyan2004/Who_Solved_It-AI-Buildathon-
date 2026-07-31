@@ -21,7 +21,7 @@
 | Paper & Ledger product UI | Implemented | Warm paper/ink light theme, graphite dark theme, ledger-style result rows, bracket-style status chips, and source-grounded summary panel |
 | Light and dark themes | Implemented | Semantic color tokens across product surfaces with no glassmorphism dependency |
 | Responsive UI | Implemented | Desktop master-detail workspace and mobile detail sheets |
-| Showcase corpus | Implemented | 43 supplied employee profiles, 54 technologies, 97 incident blueprints, and 679 generated original synthetic technical records |
+| Showcase corpus | Implemented | 43 supplied employee profiles, 56 technologies, 257 incident blueprints, and 1799 generated original synthetic technical records |
 | Local Docker setup | Implemented | React, FastAPI, PostgreSQL, pgvector |
 | Hosted deployment | Excluded | Not required for the zero-cost buildathon scope |
 

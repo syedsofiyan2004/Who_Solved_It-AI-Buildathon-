@@ -154,8 +154,9 @@ export const copy = {
     invalid: "We could not sign you in with those details.",
     description: "Search verified technical fixes, understand what worked, and reach the colleague who solved it.",
     accessIntro: "Use your assigned internal account to continue.",
-    seededAccess: "Seeded access profiles",
-    seededAccessBody: "Select a prepared internal account for local product review.",
+    accessNote: "This environment uses controlled review credentials. Employee names and contact details are shown only after sign-in and permission checks.",
+    seededAccess: "Controlled access",
+    seededAccessBody: "Use the credentials assigned for this review environment.",
     internalOnly: "Approved internal access only",
     emailInvalid: "Enter a valid work email address.",
     passwordInvalid: "Enter a password between 8 and 128 characters."

@@ -33,6 +33,8 @@ export function ProfilePage() {
     onSuccess: async (updated) => {
       queryClient.setQueryData(["employee-profile", userId], updated);
       queryClient.setQueryData(["employee-profile", "me"], updated);
+      queryClient.setQueryData(["employee-profile", updated.user_id], updated);
+      await queryClient.invalidateQueries({ queryKey: ["employee-directory"] });
       await refreshUser();
       setEditing(false);
       setSavedMessage(copy.profile.profileSaved);
