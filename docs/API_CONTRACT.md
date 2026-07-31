@@ -30,7 +30,7 @@ Codes: 400 malformed request, 401 unauthenticated, 403 unauthorized, 404 authori
 | `POST /auth/logout` | Revoke/session logout mechanism | Any authenticated | optional refresh/session identifier | `204`; always audit. |
 | `GET /auth/me` | Current user/profile | Any authenticated | none | `200 User`, `401`. |
 | `GET /profiles/me` | Own full editable profile | Any authenticated | none | `200`; owner only. |
-| `PATCH /profiles/me` | Edit allowed self fields | Any authenticated | display name/title/skills/contact action, strict lengths | `200`, `422`; cannot alter role/org scope. |
+| `PATCH /profiles/me` | Edit allowed self fields | Any authenticated | display name/title/skills/contact email/contact handle, strict lengths | `200`, `409`, `422`; cannot alter role/org scope. Work-email changes update both `employee_profiles.contact_email` and `users.email`, so the new email becomes the login identifier. Duplicate account emails return `409 email_in_use`. |
 | `GET /profiles/{user_id}` | Discover allowed employee profile | Any authenticated | UUID | `200 allowed User`, `404` if not visible, `403` never exposes prohibited contact. |
 | `GET /technologies` | List/search tag vocabulary | Any authenticated | `q`, page controls | paginated `200`; active tags only. |
 | `GET /challenges` | Browse authorized records | Any authenticated | status, technology, team, department, visibility filters; paging | `200`; server intersects filters with caller scope. |

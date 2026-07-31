@@ -1,38 +1,53 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Design system: "Paper & Ledger"
+  ---------------------------------
+  This product's job is to turn a messy technical problem into a verified,
+  attributable record - the same instinct as a lab notebook or a commit log.
+  Light mode reads like paper and ink with a ledger stamp. Dark mode reads
+  like a blueprint: graphite, grid lines, and the same three signal colors
+  doing real work instead of one glowing accent doing everything.
+
+  Signal colors always mean the same thing everywhere in the product:
+    green  (success)  -> verified / reviewed / passing
+    amber  (warning)  -> pending / in review / needs attention
+    indigo (primary)  -> interactive / "do this next"
+*/
+
 :root {
-  --color-background: 247 248 252;
-  --color-foreground: 21 25 42;
-  --color-canvas: 244 246 251;
-  --color-surface: 255 255 255;
-  --color-surface-foreground: 21 25 42;
-  --color-card: 255 255 255;
-  --color-card-foreground: 21 25 42;
+  --color-background: 244 245 240;
+  --color-foreground: 18 22 28;
+  --color-canvas: 238 240 233;
+  --color-surface: 252 252 249;
+  --color-surface-foreground: 18 22 28;
+  --color-card: 252 252 249;
+  --color-card-foreground: 18 22 28;
   --color-elevated: 255 255 255;
-  --color-muted: 240 242 248;
-  --color-muted-foreground: 91 99 121;
-  --color-surface-muted: 244 245 250;
-  --color-border: 224 228 238;
-  --color-border-strong: 187 195 214;
-  --color-input: 215 221 234;
-  --color-text: 21 25 42;
-  --color-text-muted: 91 99 121;
-  --color-primary: 79 70 229;
+  --color-muted: 232 234 225;
+  --color-muted-foreground: 93 99 88;
+  --color-surface-muted: 238 239 231;
+  --color-border: 216 219 205;
+  --color-border-strong: 176 182 161;
+  --color-input: 199 204 185;
+  --color-text: 18 22 28;
+  --color-text-muted: 93 99 88;
+  --color-primary: 59 76 203;
   --color-primary-foreground: 255 255 255;
-  --color-accent: 79 70 229;
+  --color-accent: 59 76 203;
   --color-accent-foreground: 255 255 255;
-  --color-accent-hover: 67 56 202;
-  --color-brand-soft: 237 233 254;
-  --color-brand-strong: 91 77 219;
-  --color-success: 22 130 87;
-  --color-warning: 181 108 7;
-  --color-destructive: 190 45 62;
-  --color-danger: 190 45 62;
-  --color-info: 35 111 178;
-  --color-code: 17 20 31;
-  --color-code-foreground: 236 238 247;
+  --color-accent-hover: 44 58 168;
+  --color-brand-soft: 228 230 250;
+  --color-brand-strong: 44 58 168;
+  --color-success: 13 110 82;
+  --color-warning: 158 100 9;
+  --color-destructive: 168 58 58;
+  --color-danger: 168 58 58;
+  --color-info: 51 100 148;
+  --color-code: 18 22 28;
+  --color-code-foreground: 224 229 216;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: light;
   font-synthesis: none;
@@ -40,36 +55,36 @@
 }
 
 :root[data-theme="dark"] {
-  --color-background: 13 15 23;
-  --color-foreground: 241 243 249;
-  --color-canvas: 10 12 19;
-  --color-surface: 20 23 34;
-  --color-surface-foreground: 241 243 249;
-  --color-card: 22 25 37;
-  --color-card-foreground: 241 243 249;
-  --color-elevated: 27 31 45;
-  --color-muted: 34 38 54;
-  --color-muted-foreground: 160 169 191;
-  --color-surface-muted: 29 33 47;
-  --color-border: 49 55 75;
-  --color-border-strong: 82 91 117;
-  --color-input: 58 65 88;
-  --color-text: 241 243 249;
-  --color-text-muted: 160 169 191;
-  --color-primary: 139 127 255;
-  --color-primary-foreground: 15 14 28;
-  --color-accent: 139 127 255;
-  --color-accent-foreground: 15 14 28;
-  --color-accent-hover: 166 156 255;
-  --color-brand-soft: 44 39 82;
-  --color-brand-strong: 166 156 255;
-  --color-success: 76 211 155;
-  --color-warning: 249 190 90;
-  --color-destructive: 255 135 147;
-  --color-danger: 255 135 147;
-  --color-info: 112 185 242;
-  --color-code: 8 10 17;
-  --color-code-foreground: 240 242 248;
+  --color-background: 17 20 25;
+  --color-foreground: 232 234 226;
+  --color-canvas: 13 16 20;
+  --color-surface: 26 31 38;
+  --color-surface-foreground: 232 234 226;
+  --color-card: 28 33 41;
+  --color-card-foreground: 232 234 226;
+  --color-elevated: 34 40 49;
+  --color-muted: 36 42 50;
+  --color-muted-foreground: 150 158 144;
+  --color-surface-muted: 31 37 45;
+  --color-border: 49 57 66;
+  --color-border-strong: 73 83 94;
+  --color-input: 58 67 77;
+  --color-text: 232 234 226;
+  --color-text-muted: 150 158 144;
+  --color-primary: 129 144 244;
+  --color-primary-foreground: 15 18 30;
+  --color-accent: 129 144 244;
+  --color-accent-foreground: 15 18 30;
+  --color-accent-hover: 158 170 247;
+  --color-brand-soft: 39 44 76;
+  --color-brand-strong: 174 184 249;
+  --color-success: 63 199 152;
+  --color-warning: 227 163 61;
+  --color-destructive: 224 116 116;
+  --color-danger: 224 116 116;
+  --color-info: 116 171 220;
+  --color-code: 10 13 16;
+  --color-code-foreground: 210 235 220;
   color-scheme: dark;
 }
 
@@ -89,11 +104,7 @@ html {
 body {
   min-width: 320px;
   margin: 0;
-  background:
-    radial-gradient(circle at 18% -10%, rgb(var(--color-primary) / 0.10), transparent 30rem),
-    radial-gradient(circle at 94% 12%, rgb(var(--color-info) / 0.07), transparent 28rem),
-    linear-gradient(180deg, rgb(var(--color-surface) / 0.30), transparent 18rem),
-    rgb(var(--color-canvas));
+  background: rgb(var(--color-canvas));
   color: rgb(var(--color-text));
 }
 
@@ -122,35 +133,25 @@ select:focus-visible {
   scrollbar-width: thin;
 }
 
+code,
+kbd,
+.font-data {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-feature-settings: "liga" 0;
+}
+
+/* Flat "paper" surfaces - no glass, no gloss. A ledger sheet, not a screen. */
 .premium-panel {
   border: 1px solid rgb(var(--color-border));
-  background: rgb(var(--color-surface) / 0.92);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03), 0 16px 42px rgb(15 23 42 / 0.045);
-  backdrop-filter: blur(14px);
+  background: rgb(var(--color-surface));
+  box-shadow: 0 1px 0 rgb(var(--color-border) / 0.6);
 }
 
 .product-card {
   position: relative;
   border: 1px solid rgb(var(--color-border));
-  background:
-    linear-gradient(180deg, rgb(var(--color-surface) / 0.96), rgb(var(--color-surface) / 0.88)),
-    rgb(var(--color-surface));
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 18px 44px rgb(15 23 42 / 0.055);
-  backdrop-filter: blur(16px);
-}
-
-.product-card::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgb(255 255 255 / 0.45), transparent 34%);
-  opacity: 0.55;
-}
-
-:root[data-theme="dark"] .product-card::before {
-  background: linear-gradient(135deg, rgb(255 255 255 / 0.08), transparent 38%);
+  background: rgb(var(--color-surface));
+  box-shadow: 0 1px 0 rgb(var(--color-border) / 0.6);
 }
 
 .interactive-lift {
@@ -164,7 +165,7 @@ select:focus-visible {
 .interactive-lift:hover {
   transform: translateY(-2px);
   border-color: rgb(var(--color-border-strong));
-  box-shadow: 0 2px 4px rgb(15 23 42 / 0.05), 0 22px 58px rgb(15 23 42 / 0.085);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.08);
 }
 
 .pressable {
@@ -188,12 +189,92 @@ select:focus-visible {
   box-shadow: 0 0 0 4px rgb(var(--color-accent) / 0.14);
 }
 
+/* Blueprint / graph-paper grid - an engineering artifact, not a decoration. */
 .subtle-grid {
   background-image:
-    linear-gradient(rgb(var(--color-border) / 0.32) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--color-border) / 0.32) 1px, transparent 1px);
+    linear-gradient(rgb(var(--color-border) / 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--color-border) / 0.5) 1px, transparent 1px);
   background-size: 28px 28px;
   mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+/* Dark "blueprint" panel used for the one or two moments per page that earn
+   full-bleed contrast. Deliberately not glassy: flat graphite, a hairline
+   grid, and a single ledger-rule in the signal color, nothing else. */
+.enterprise-shell {
+  background: rgb(13 16 20);
+  color: rgb(220 224 214);
+}
+
+.enterprise-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgb(var(--color-success)), rgb(var(--color-primary)) 55%, rgb(var(--color-warning)));
+  opacity: 0.9;
+}
+
+.enterprise-shell .text-text {
+  color: rgb(240 242 234);
+}
+
+.enterprise-shell .text-text-muted {
+  color: rgb(154 163 148);
+}
+
+.workspace-surface {
+  border: 1px solid rgb(var(--color-border));
+  background: rgb(var(--color-surface));
+  box-shadow: 0 1px 0 rgb(var(--color-border) / 0.6);
+}
+
+/* A "ledger row" - the product's signature card. Every verified fix reads
+   like a commit: a rail that carries the verification color, a monospace
+   record id, and a blame line at the foot naming the person who owns it. */
+.ledger-row {
+  position: relative;
+  border: 1px solid rgb(var(--color-border));
+  background: rgb(var(--color-surface));
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.ledger-row:hover {
+  border-color: rgb(var(--color-border-strong));
+  box-shadow: 0 10px 28px rgb(15 23 42 / 0.07);
+}
+
+.ledger-rail {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+}
+
+/* Bracket-style status chip: [ VERIFIED ], the way a CI badge or a git
+   status line reads, not a rounded pill borrowed from a generic UI kit. */
+.status-chip {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.result-row {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.result-row:hover {
+  transform: translateX(2px);
+  border-color: rgb(var(--color-border-strong));
+  box-shadow: 0 18px 48px rgb(15 23 42 / 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {

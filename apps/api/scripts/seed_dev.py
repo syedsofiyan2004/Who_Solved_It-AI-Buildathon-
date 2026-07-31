@@ -117,9 +117,11 @@ TECHNOLOGIES = [
     ("VPC", "networking"), ("Security", "security"), ("SRE", "reliability"), ("AI", "ai"),
     ("MySQL", "database"), ("Redis", "database"), ("Kafka", "streaming"), ("Elasticsearch", "search"),
     ("Prometheus", "observability"), ("Grafana", "observability"), ("Loki", "observability"),
-    ("Python", "language"), ("FastAPI", "framework"), ("SQLAlchemy", "framework"), ("React", "framework"), ("Node.js", "runtime"),
+    ("Python", "language"), ("FastAPI", "framework"), ("SQLAlchemy", "framework"), ("React", "framework"),
+    ("Vite", "framework"), ("TypeScript", "language"), ("Node.js", "runtime"),
     ("Airflow", "data"), ("Spark", "data"), ("dbt", "data"), ("MLflow", "mlops"),
     ("Vector Search", "ai"), ("LLM", "ai"), ("RAG", "ai"), ("CUDA", "ai"),
+    ("OpenTelemetry", "observability"), ("Istio", "networking"), ("Vault", "security"), ("Celery", "runtime"),
 ]
 
 
@@ -198,7 +200,616 @@ BLUEPRINTS = [
     ("promql-many-to-one", "sre", "Dashboard query fails after label change", "many-to-many matching not allowed", "The query joined request and error metrics without a unique matching label set after route labels changed.", ["Inspect labels on both sides of the PromQL expression.", "Aggregate to one series per matching key.", "Use group modifiers only when the one-side is guaranteed unique."], ["Prometheus", "Grafana"], "count by (job, route) (http_requests_total)"),
     ("waf-rule-false-positive", "cloud", "Internal API calls are blocked after WAF rule update", "403 Forbidden", "A managed rule matched a legitimate JSON field used by the deployment API.", ["Review sampled WAF requests for the matched rule ID.", "Add a narrow rule exception for the approved path and field.", "Replay blocked and malicious samples before enabling."], ["AWS", "WAF", "Security"], "aws wafv2 get-sampled-requests --web-acl-arn <arn> --rule-metric-name <rule>"),
     ("route53-split-horizon", "cloud", "Service resolves to a public address from private workloads", "connection refused to public endpoint", "The private hosted zone record was missing, so workloads fell back to public DNS resolution.", ["Resolve the name from inside the private subnet.", "Create or associate the private hosted zone record.", "Validate resolver order and remove stale public assumptions."], ["Route 53", "AWS", "VPC"], "dig +short <service-name>"),
+    ("otel-trace-gap", "sre", "Distributed trace disappears at the payment boundary", "missing parent span context", "The proxy stripped traceparent headers when routing through a legacy internal domain.", ["Capture headers at each hop.", "Allow only approved tracing headers through the proxy.", "Validate one trace across frontend, API, worker, and database spans."], ["OpenTelemetry", "Nginx", "FastAPI"], "curl -H 'traceparent: 00-<trace>-<span>-01' <service>"),
+    ("istio-mtls", "cloud", "Service mesh traffic fails after mTLS policy rollout", "upstream connect error or disconnect/reset before headers", "A namespace policy required mutual TLS but one workload still used plaintext sidecar settings.", ["Inspect PeerAuthentication and DestinationRule scope.", "Align the client traffic policy with strict mTLS.", "Roll out by namespace and verify service-to-service calls."], ["Istio", "Kubernetes", "Security"], "istioctl proxy-config cluster <pod> -n <namespace>"),
+    ("vault-token-renewal", "sre", "Application loses secret access after running for several hours", "permission denied: token expired", "The service fetched a short-lived Vault token at startup and never renewed it.", ["Inspect token TTL and renewal eligibility.", "Use the approved agent or renewal path.", "Alert before lease expiry and verify rotation without restart."], ["Vault", "Security", "Linux"], "vault token lookup"),
+    ("celery-duplicate-task", "software", "Background job processes the same payment event twice", "task already acknowledged but result missing", "The task acknowledged before the idempotent database write completed during a worker restart.", ["Move acknowledgement after the durable write.", "Add an idempotency key on the business operation.", "Replay the event and confirm a single final state."], ["Celery", "Python", "PostgreSQL"], "SELECT event_id, count(*) FROM payment_events GROUP BY event_id HAVING count(*) > 1;"),
+    ("rag-permission-leak", "ai", "RAG answer includes a restricted runbook citation", "citation outside caller visibility scope", "The retrieval service ranked all candidates before applying object-level authorization.", ["Apply visibility filters before context assembly.", "Rebuild the summary context from authorized records only.", "Add an evaluation case for restricted records."], ["RAG", "Vector Search", "Security"], "assert all(can_view(user, source) for source in context)"),
+    ("rag-secret-rejection", "ai", "Embedding job rejects a newly submitted solution", "Embedding content contains a detected secret", "The author pasted an environment file into the evidence section and the scanner blocked embedding.", ["Keep the draft available for editing.", "Remove credentials from technical content.", "Regenerate the embedding only after the scanner passes."], ["RAG", "Security", "Python"], "python scripts/scan_secrets.py <solution-export>"),
+    ("llm-json-invalid", "ai", "Grounded summary is unavailable despite strong matches", "model returned invalid JSON", "The generation model returned prose instead of the required citation JSON contract.", ["Reject the unsafe response.", "Show retrieved records without synthetic summary.", "Tighten the structured-output prompt and adapter validation."], ["LLM", "RAG", "FastAPI"], "json.loads(model_response)"),
+    ("gpu-fragmentation", "ai", "LLM inference fails during KV cache allocation", "CUDA out of memory while allocating KV cache", "Temporary allocations fragmented GPU memory before the serving engine reserved cache blocks.", ["Identify whether OOM occurs during weights, graph capture, or KV cache allocation.", "Reduce GPU memory utilization or batch size.", "Restart workers and validate sustained inference load."], ["CUDA", "LLM", "AI"], "nvidia-smi --query-compute-apps=pid,used_memory --format=csv"),
+    ("prometheus-remote-write", "sre", "Metrics backlog grows after remote-write outage", "remote storage queue full", "The remote-write queue could not drain after a downstream outage and started dropping samples.", ["Inspect remote-write queue length and shard count.", "Throttle noisy metric sources before increasing capacity.", "Replay from durable storage only where available."], ["Prometheus", "Grafana", "SRE"], "prometheus_remote_storage_samples_pending"),
+    ("postgres-autovacuum-wraparound", "software", "PostgreSQL blocks writes during maintenance window", "database is not accepting commands to avoid wraparound data loss", "Autovacuum was disabled on a high-churn table and transaction IDs approached the safety limit.", ["Identify tables closest to wraparound.", "Run a controlled vacuum freeze.", "Re-enable autovacuum with table-specific thresholds."], ["PostgreSQL", "SRE"], "SELECT relname, age(relfrozenxid) FROM pg_class ORDER BY age(relfrozenxid) DESC LIMIT 20;"),
+    ("airflow-xcom-bloat", "data", "Airflow scheduler slows after model evaluation DAG", "metadata database timeout", "Tasks stored large evaluation payloads in XCom instead of object storage.", ["Find oversized XCom rows.", "Store payloads in durable object storage.", "Keep only small references in metadata."], ["Airflow", "PostgreSQL", "Python"], "SELECT dag_id, octet_length(value) FROM xcom ORDER BY octet_length(value) DESC LIMIT 20;"),
+    ("spark-small-files", "data", "Spark job slows after CDC ingestion cutover", "Listing file status took longer than expected", "The CDC pipeline created thousands of small files per partition.", ["Measure file count and average file size.", "Compact partitions with a controlled job.", "Tune the ingestion writer to target larger files."], ["Spark", "S3", "Python"], "aws s3 ls s3://<bucket>/<prefix>/ --recursive | wc -l"),
+    ("iam-session-tag-deny", "cloud", "Assumed role is denied because session tags are missing", "AccessDenied: principal tag condition failed", "The destination account policy required a project session tag, but the deployment workflow did not pass transitive tags.", ["Inspect CloudTrail for the evaluated principal tags.", "Pass only the approved session tags from the identity broker.", "Retest the same action with IAM policy simulation."], ["AWS", "IAM", "Security"], "aws sts assume-role --role-arn <role> --role-session-name <session> --tags Key=project,Value=<project>"),
+    ("eks-webhook-timeout", "cloud", "Kubernetes deployment hangs on admission webhook", "failed calling webhook: context deadline exceeded", "The validating webhook service had no ready endpoints after a namespace label change.", ["List webhook configurations and service endpoints.", "Restore the webhook backing deployment.", "Add a failure-policy decision and readiness alert."], ["Kubernetes", "EKS", "Security"], "kubectl get validatingwebhookconfigurations && kubectl get endpoints -A"),
+    ("helm-crd-order", "cloud", "Helm release fails while installing custom resources", "no matches for kind in version", "The chart applied custom resources before the matching CRD was established in the API server.", ["Install or upgrade CRDs before dependent resources.", "Wait for CRD establishment.", "Split CRD lifecycle from application release when required."], ["Helm", "Kubernetes"], "kubectl wait --for condition=established crd/<name> --timeout=60s"),
+    ("postgres-plan-regression", "software", "API latency spikes after statistics reset", "query exceeded statement timeout", "The planner selected a sequential scan after table statistics became stale during bulk loading.", ["Compare actual and estimated row counts.", "Run analyze on the affected table.", "Add a post-load statistics refresh to the runbook."], ["PostgreSQL", "FastAPI"], "EXPLAIN (ANALYZE, BUFFERS) SELECT ..."),
+    ("nginx-header-size", "software", "Authenticated API calls fail behind Nginx", "upstream sent too big header", "The identity response added group claims that exceeded the proxy header buffer.", ["Confirm the response header size at the proxy.", "Reduce unnecessary claims or tune approved header buffers.", "Retest login and refresh-token paths."], ["Nginx", "OIDC", "FastAPI"], "nginx -T | grep proxy_buffer"),
+    ("kafka-offset-reset", "data", "Kafka consumer reprocesses a completed topic partition", "OffsetOutOfRangeException", "Retention removed the committed offset before the paused consumer resumed.", ["Check committed offsets against earliest available offsets.", "Restore from the approved checkpoint when possible.", "Set lag and retention alerts for paused consumers."], ["Kafka", "Prometheus"], "kafka-consumer-groups --bootstrap-server <broker> --describe --group <group>"),
+    ("spark-skew-join", "data", "Spark executor repeatedly fails on one partition", "Container killed by YARN for exceeding memory limits", "A skewed join key concentrated most records into one shuffle partition.", ["Inspect partition-size distribution.", "Apply salting or skew join handling for the hot key.", "Validate shuffle spill and task retry counts."], ["Spark", "Python"], "spark.sql.adaptive.skewJoin.enabled=true"),
+    ("opentelemetry-exporter-backpressure", "sre", "API latency rises when trace exporter slows", "export queue is full", "The synchronous telemetry exporter blocked request handling when the collector endpoint was saturated.", ["Inspect exporter queue metrics.", "Move export to bounded asynchronous processing.", "Drop or sample telemetry before it affects user traffic."], ["OpenTelemetry", "FastAPI", "SRE"], "otelcol_exporter_queue_size"),
+    ("vault-agent-template-stale", "sre", "Application keeps using a rotated database password", "password authentication failed for user", "Vault Agent rendered the new secret file but the application never reloaded its connection pool.", ["Check rendered secret timestamps.", "Trigger the approved reload path after rotation.", "Verify new database sessions use the rotated credential."], ["Vault", "PostgreSQL", "Security"], "vault read database/creds/<role>"),
+    ("rag-chunk-boundary-miss", "ai", "Search misses a solution when the exact error is split across chunks", "exact phrase not found in retrieved context", "The ingestion job split stack traces without preserving overlapping error fragments.", ["Inspect chunk boundaries for the source solution.", "Add bounded overlap around error-message regions.", "Re-embed and verify the evaluation query returns the source."], ["RAG", "Vector Search", "Python"], "chunker.split(text, overlap=ERROR_FRAGMENT_OVERLAP)"),
+    ("llm-rate-limit", "ai", "Summary generation fails during a high-volume review session", "429 Too Many Requests", "The generation adapter retried all requests immediately instead of applying bounded backoff.", ["Separate retrieval success from summary generation failure.", "Apply bounded exponential backoff with jitter.", "Return cited results even when summary generation is unavailable."], ["LLM", "FastAPI", "SRE"], "Retry-After: <seconds>"),
+    ("gpu-driver-mismatch", "ai", "GPU inference pod cannot start after node image update", "CUDA driver version is insufficient for CUDA runtime version", "The node driver stack was older than the container runtime expected.", ["Compare node driver, CUDA runtime, and framework versions.", "Schedule the workload on compatible GPU nodes.", "Pin the approved image/runtime combination."], ["CUDA", "Kubernetes", "AI"], "nvidia-smi && python -c \"import torch; print(torch.version.cuda)\""),
 ]
+
+BLUEPRINT_EXPANSION_VARIANTS = [
+    ("payments", "Payments workflow", "the payments API release path"),
+    ("analytics", "Analytics workflow", "the analytics workspace refresh path"),
+    ("identity", "Identity workflow", "the identity bridge login path"),
+    ("knowledge", "Knowledge workflow", "the knowledge service review path"),
+]
+
+BLUEPRINT_EXPANSION_CASES = [
+    (
+        "lambda-subnet-ip-exhaustion",
+        "cloud",
+        "Lambda functions fail after VPC subnet expansion",
+        "ENILimitReachedException",
+        "The function created too many unique subnet and security-group combinations for the VPC attachment limit.",
+        [
+            "List function subnet and security-group combinations.",
+            "Consolidate unnecessary combinations and remove stale versions.",
+            "Request quota increase only after reducing configuration sprawl.",
+        ],
+        ["Lambda", "VPC", "AWS"],
+        "aws lambda get-function-configuration --function-name <name>",
+    ),
+    (
+        "api-gateway-integration-502",
+        "cloud",
+        "API Gateway returns 502 from a healthy backend",
+        "Execution failed due to configuration error: Malformed Lambda proxy response",
+        "The backend returned a body object instead of a JSON string in the proxy response contract.",
+        [
+            "Inspect the raw integration response in execution logs.",
+            "Return statusCode, headers, and a stringified body.",
+            "Add a contract test for success and error responses.",
+        ],
+        ["API Gateway", "Lambda", "Python"],
+        "return {'statusCode': 200, 'body': json.dumps(payload)}",
+    ),
+    (
+        "s3-presigned-clock-skew",
+        "cloud",
+        "S3 presigned uploads fail from one worker group",
+        "SignatureDoesNotMatch",
+        "The worker nodes generated signatures with a clock drift outside the accepted request window.",
+        [
+            "Compare node time against a trusted time source.",
+            "Restart or repair time synchronization on the affected hosts.",
+            "Regenerate the presigned URL and verify upload from the worker network.",
+        ],
+        ["S3", "AWS", "Linux"],
+        "timedatectl status",
+    ),
+    (
+        "iam-permission-boundary-deny",
+        "cloud",
+        "Deployment role is denied despite an attached allow policy",
+        "AccessDenied: explicit deny in a permissions boundary",
+        "The role permission boundary did not include the newly required service action.",
+        [
+            "Run policy simulation with the exact role and action.",
+            "Update the boundary through the approved security review.",
+            "Retest with the narrow target resource instead of wildcard access.",
+        ],
+        ["IAM", "AWS", "Security"],
+        "aws iam simulate-principal-policy --policy-source-arn <role-arn> --action-names <action>",
+    ),
+    (
+        "ecr-auth-token-expired",
+        "cloud",
+        "Container image push fails near the end of a long pipeline",
+        "denied: Your authorization token has expired",
+        "The pipeline authenticated to the registry before a long build and reused an expired token for push.",
+        [
+            "Move registry login closer to the push step.",
+            "Fail fast when image build time exceeds token lifetime.",
+            "Publish the image and verify the digest used by deployment.",
+        ],
+        ["Docker", "GitHub Actions", "AWS"],
+        "aws ecr get-login-password | docker login --username AWS --password-stdin <registry>",
+    ),
+    (
+        "eks-cni-ip-pressure",
+        "cloud",
+        "EKS node becomes NotReady after burst scheduling",
+        "failed to assign an IP address to container",
+        "The node subnet ran out of available pod IP addresses during the rollout.",
+        [
+            "Check CNI logs and subnet available IP count.",
+            "Reduce burst scheduling or add approved subnet capacity.",
+            "Validate pod networking after recycling affected nodes.",
+        ],
+        ["EKS", "Kubernetes", "VPC"],
+        "kubectl -n kube-system logs ds/aws-node",
+    ),
+    (
+        "helm-values-type-mismatch",
+        "cloud",
+        "Helm template renders an invalid manifest",
+        "cannot unmarshal number into Go struct field EnvVar.value of type string",
+        "A numeric value was supplied without quoting where Kubernetes expected a string environment value.",
+        [
+            "Render the chart locally with the target values file.",
+            "Quote string-typed environment values in Helm templates.",
+            "Run schema validation before applying the release.",
+        ],
+        ["Helm", "Kubernetes"],
+        "helm template <release> <chart> -f values.yaml | kubectl apply --dry-run=server -f -",
+    ),
+    (
+        "terraform-provider-region-drift",
+        "cloud",
+        "Terraform reads resources from the wrong account region",
+        "NoSuchEntity: The role with name cannot be found",
+        "A provider alias inherited the default region instead of the workload-specific region.",
+        [
+            "Inspect the provider block and module alias wiring.",
+            "Pass the explicit provider alias into the child module.",
+            "Run plan with account and region outputs enabled for review.",
+        ],
+        ["Terraform", "AWS", "IAM"],
+        "terraform providers",
+    ),
+    (
+        "cloudformation-export-in-use",
+        "cloud",
+        "CloudFormation cannot remove an old network output",
+        "Export cannot be deleted as it is in use",
+        "A dependent stack still imported the exported subnet value after the network refactor.",
+        [
+            "List imports for the export name.",
+            "Update dependent stacks to the replacement value first.",
+            "Remove the old export only after imports are zero.",
+        ],
+        ["CloudFormation", "AWS", "VPC"],
+        "aws cloudformation list-imports --export-name <export>",
+    ),
+    (
+        "route53-health-stale",
+        "cloud",
+        "Route 53 keeps sending traffic to a recovered endpoint",
+        "health check status remains unhealthy",
+        "The health check matched an old path that was removed during the service cutover.",
+        [
+            "Call the health-check path from outside the VPC.",
+            "Update the check to the approved lightweight endpoint.",
+            "Confirm DNS failover state after two healthy intervals.",
+        ],
+        ["Route 53", "AWS", "Nginx"],
+        "aws route53 get-health-check-status --health-check-id <id>",
+    ),
+    (
+        "grafana-datasource-tls",
+        "sre",
+        "Grafana panels fail after datasource certificate rotation",
+        "x509: certificate signed by unknown authority",
+        "The datasource container did not trust the internal certificate authority bundle.",
+        [
+            "Verify the certificate chain from the Grafana pod.",
+            "Mount the approved CA bundle into the datasource client path.",
+            "Restart the datasource and confirm dashboard queries recover.",
+        ],
+        ["Grafana", "Prometheus", "Linux"],
+        "openssl s_client -connect <host>:443 -showcerts",
+    ),
+    (
+        "loki-label-drop",
+        "sre",
+        "Loki cannot find logs after pipeline relabeling",
+        "no labels matched selector",
+        "The ingestion pipeline dropped the service label used by incident queries.",
+        [
+            "Inspect labels at the log shipper and Loki ingestion boundary.",
+            "Restore the low-cardinality service label.",
+            "Backfill only if retention and storage policy allow it.",
+        ],
+        ["Loki", "Grafana", "SRE"],
+        "logcli labels service --since=1h",
+    ),
+    (
+        "prometheus-scrape-unauthorized",
+        "sre",
+        "Prometheus scrape target turns unhealthy after auth change",
+        "server returned HTTP status 401 Unauthorized",
+        "The metrics endpoint started requiring a bearer token that the scrape job did not send.",
+        [
+            "Confirm the target response from the Prometheus network.",
+            "Configure the approved scrape credential or expose a safe metrics path.",
+            "Reload Prometheus and verify target health.",
+        ],
+        ["Prometheus", "Grafana", "Security"],
+        "curl -i http://<target>/metrics",
+    ),
+    (
+        "k8s-hpa-missing-metrics",
+        "sre",
+        "Horizontal pod autoscaler stops scaling during load",
+        "failed to get cpu utilization: missing request for cpu",
+        "The deployment omitted CPU requests, so the autoscaler could not compute utilization.",
+        [
+            "Inspect HPA events and deployment resource requests.",
+            "Set measured CPU requests for the workload.",
+            "Replay controlled load and verify scaling decisions.",
+        ],
+        ["Kubernetes", "Prometheus", "SRE"],
+        "kubectl describe hpa <name>",
+    ),
+    (
+        "node-inode-exhaustion",
+        "sre",
+        "Linux node has free disk but pods cannot write files",
+        "No space left on device",
+        "The filesystem exhausted inodes because temporary files were created without cleanup.",
+        [
+            "Check inode utilization separately from byte utilization.",
+            "Remove only safe temporary files and fix the cleanup job.",
+            "Add inode saturation alerts to node monitoring.",
+        ],
+        ["Linux", "Kubernetes", "Grafana"],
+        "df -ih",
+    ),
+    (
+        "otel-collector-memory-limiter",
+        "sre",
+        "OpenTelemetry collector restarts during traffic spikes",
+        "memory_limiter processor refused data",
+        "The collector accepted more spans than its memory limiter and batch settings could handle.",
+        [
+            "Inspect collector memory and dropped-span metrics.",
+            "Tune batch size and memory limiter together.",
+            "Apply tail sampling before scaling collector replicas.",
+        ],
+        ["OpenTelemetry", "Kubernetes", "SRE"],
+        "otelcol_processor_refused_spans",
+    ),
+    (
+        "alertmanager-route-shadow",
+        "sre",
+        "Critical alert is routed to the wrong receiver",
+        "alert delivered to default receiver",
+        "A broad parent route matched before the intended team-specific route.",
+        [
+            "Test the alert labels against the routing tree.",
+            "Move the specific route before the broad fallback.",
+            "Send a synthetic alert and verify receiver ownership.",
+        ],
+        ["Prometheus", "Grafana", "SRE"],
+        "amtool config routes test --config.file alertmanager.yml severity=critical team=<team>",
+    ),
+    (
+        "fastapi-validation-alias",
+        "software",
+        "FastAPI endpoint rejects a valid client payload",
+        "422 Unprocessable Entity",
+        "The API schema used a Python field name while the client sent the documented JSON alias.",
+        [
+            "Compare request JSON with the Pydantic schema aliases.",
+            "Enable validated alias handling for the boundary model.",
+            "Add integration tests for documented request fields.",
+        ],
+        ["FastAPI", "Python"],
+        "model_config = ConfigDict(populate_by_name=True)",
+    ),
+    (
+        "sqlalchemy-detached-instance",
+        "software",
+        "API serialization fails after session close",
+        "DetachedInstanceError",
+        "The response builder accessed a lazy relationship after the database session was closed.",
+        [
+            "Identify lazy fields used during serialization.",
+            "Load required relationships inside the transaction boundary.",
+            "Add a regression test that serializes after session cleanup.",
+        ],
+        ["SQLAlchemy", "FastAPI", "PostgreSQL"],
+        "selectinload(Model.relationship)",
+    ),
+    (
+        "node-esm-commonjs",
+        "software",
+        "Node.js worker fails after dependency upgrade",
+        "ERR_REQUIRE_ESM",
+        "A package changed to ESM-only while the worker still imported it through CommonJS require.",
+        [
+            "Identify the upgraded package entrypoint.",
+            "Switch the worker import path to dynamic import or ESM.",
+            "Run the packaged worker in the same Node version as production.",
+        ],
+        ["Node.js", "TypeScript"],
+        "const mod = await import('package-name')",
+    ),
+    (
+        "vite-public-env-prefix",
+        "software",
+        "Vite frontend builds without the configured API URL",
+        "import.meta.env.VITE_API_BASE_URL is undefined",
+        "The environment variable lacked the VITE_ prefix required for client exposure.",
+        [
+            "List build-time environment variables visible to Vite.",
+            "Rename only public client configuration with the approved VITE_ prefix.",
+            "Rebuild and confirm the generated bundle points to the expected API.",
+        ],
+        ["Vite", "React", "TypeScript"],
+        "echo $VITE_API_BASE_URL && npm run build",
+    ),
+    (
+        "react-hydration-theme",
+        "software",
+        "React page flashes and reports hydration mismatch",
+        "Text content does not match server-rendered HTML",
+        "Theme state was read from local storage during render before the client mounted.",
+        [
+            "Reproduce with a clean browser profile.",
+            "Defer browser-only state until after mount.",
+            "Add a visual regression for the initial render state.",
+        ],
+        ["React", "TypeScript"],
+        "useEffect(() => setTheme(loadTheme()), [])",
+    ),
+    (
+        "python-timezone-naive",
+        "software",
+        "Scheduled task runs an hour late after region change",
+        "can't compare offset-naive and offset-aware datetimes",
+        "The scheduler compared UTC-aware database timestamps with naive Python datetimes.",
+        [
+            "Trace timestamp creation and database serialization.",
+            "Normalize all scheduler comparisons to timezone-aware UTC.",
+            "Add tests around daylight-saving and region boundary dates.",
+        ],
+        ["Python", "FastAPI"],
+        "datetime.now(UTC)",
+    ),
+    (
+        "nginx-websocket-upgrade",
+        "software",
+        "Realtime client disconnects behind Nginx",
+        "WebSocket connection failed: Error during WebSocket handshake",
+        "The reverse proxy did not forward Upgrade and Connection headers to the upstream service.",
+        [
+            "Reproduce the handshake through the proxy.",
+            "Add the required WebSocket upgrade headers.",
+            "Run a long-lived connection smoke test after reload.",
+        ],
+        ["Nginx", "Node.js", "React"],
+        "proxy_set_header Upgrade $http_upgrade;",
+    ),
+    (
+        "redis-json-serialization",
+        "software",
+        "API fails to read cached profile data",
+        "TypeError: Object of type UUID is not JSON serializable",
+        "The cache writer stored raw Python objects instead of a stable JSON-safe representation.",
+        [
+            "Inspect the exact object written to cache.",
+            "Serialize UUIDs and datetimes at the cache boundary.",
+            "Clear affected keys and add a cache round-trip test.",
+        ],
+        ["Redis", "Python", "FastAPI"],
+        "json.dumps(payload, default=str)",
+    ),
+    (
+        "postgres-prepared-statement-stale",
+        "software",
+        "PostgreSQL queries fail after deploy with pooled connections",
+        "cached plan must not change result type",
+        "A migration changed a selected column type while pooled prepared statements stayed open.",
+        [
+            "Confirm the failure occurs only on existing pooled connections.",
+            "Recycle application connections after the migration.",
+            "Deploy a migration runbook that coordinates schema change and pool restart.",
+        ],
+        ["PostgreSQL", "SQLAlchemy", "FastAPI"],
+        "DISCARD PLANS;",
+    ),
+    (
+        "mysql-collation-mismatch",
+        "software",
+        "MySQL join fails after importing reference data",
+        "Illegal mix of collations",
+        "The imported table used a different collation than the application tables.",
+        [
+            "Compare collations for both joined columns.",
+            "Convert the imported table to the approved database collation.",
+            "Add import validation before loading reference data.",
+        ],
+        ["MySQL", "Python"],
+        "SHOW FULL COLUMNS FROM <table>;",
+    ),
+    (
+        "redis-cluster-moved",
+        "sre",
+        "Redis client fails after cluster resharding",
+        "MOVED slot",
+        "The client was configured as standalone Redis and did not follow cluster slot redirects.",
+        [
+            "Confirm cluster mode and slot ownership.",
+            "Use a cluster-aware client configuration.",
+            "Run read and write tests across multiple hash slots.",
+        ],
+        ["Redis", "SRE"],
+        "redis-cli -c GET <key>",
+    ),
+    (
+        "postgres-jsonb-index-miss",
+        "software",
+        "PostgreSQL JSON filter becomes slow after data growth",
+        "query exceeded statement timeout",
+        "The query filtered a JSONB path without a matching expression or GIN index.",
+        [
+            "Capture the query plan and filter selectivity.",
+            "Add the narrow index that matches the actual predicate.",
+            "Run analyze and verify the query uses the index.",
+        ],
+        ["PostgreSQL", "FastAPI"],
+        "CREATE INDEX CONCURRENTLY ON events USING gin (payload);",
+    ),
+    (
+        "mysql-packet-too-large",
+        "data",
+        "Bulk load into MySQL fails for wide rows",
+        "Packet for query is too large",
+        "The loader batched too many large JSON fields into one insert statement.",
+        [
+            "Measure the serialized batch size before insert.",
+            "Reduce batch size and avoid unnecessary JSON payload duplication.",
+            "Tune max packet size only within the approved database limit.",
+        ],
+        ["MySQL", "Python"],
+        "SHOW VARIABLES LIKE 'max_allowed_packet';",
+    ),
+    (
+        "airflow-provider-version-skew",
+        "data",
+        "Airflow DAG fails only on workers",
+        "AttributeError: operator has no attribute",
+        "Scheduler and worker images had different provider package versions.",
+        [
+            "Print provider versions from scheduler and worker containers.",
+            "Build both images from the same locked dependency file.",
+            "Clear failed task instances and rerun the affected DAG.",
+        ],
+        ["Airflow", "Python"],
+        "airflow providers list",
+    ),
+    (
+        "spark-schema-merge-conflict",
+        "data",
+        "Spark job fails while reading partitioned data",
+        "Failed to merge incompatible data types",
+        "One partition was written with a different column type during a backfill.",
+        [
+            "Identify the partition with the conflicting schema.",
+            "Rewrite the partition with the canonical schema.",
+            "Add schema validation before future backfills.",
+        ],
+        ["Spark", "Python"],
+        "spark.read.parquet(path).printSchema()",
+    ),
+    (
+        "dbt-incremental-unique-key",
+        "data",
+        "dbt incremental model creates duplicate business rows",
+        "unique key is not unique",
+        "The incremental unique key omitted the source-system identifier after a new feed was added.",
+        [
+            "Profile duplicates by the configured unique key.",
+            "Include the source-system field in the incremental key.",
+            "Run a full refresh in the controlled environment before promotion.",
+        ],
+        ["dbt", "PostgreSQL"],
+        "dbt run --full-refresh --select <model>",
+    ),
+    (
+        "kafka-schema-registry-subject",
+        "data",
+        "Kafka producer is rejected after schema evolution",
+        "Schema being registered is incompatible with an earlier schema",
+        "The producer changed a required field without a compatible default.",
+        [
+            "Check the subject compatibility mode.",
+            "Add a backward-compatible field default or versioned topic contract.",
+            "Replay a sample event through producer and consumer validation.",
+        ],
+        ["Kafka", "Python"],
+        "curl <schema-registry>/subjects/<subject>/versions/latest",
+    ),
+    (
+        "airflow-pool-starvation",
+        "data",
+        "Airflow DAG stalls while unrelated tasks keep running",
+        "Task is queued but not running",
+        "All slots in the assigned pool were consumed by long-running backfill tasks.",
+        [
+            "Inspect pool occupancy and queued tasks.",
+            "Move backfills into a separate bounded pool.",
+            "Set pool alerts when critical DAGs cannot acquire slots.",
+        ],
+        ["Airflow", "SRE"],
+        "airflow pools list",
+    ),
+    (
+        "spark-driver-result-size",
+        "data",
+        "Spark driver fails after collect in validation job",
+        "Total size of serialized results is bigger than spark.driver.maxResultSize",
+        "The validation code collected a large distributed dataset to the driver.",
+        [
+            "Find collect or toPandas calls in the validation path.",
+            "Aggregate in Spark before returning small results to the driver.",
+            "Add a data-size guard to prevent unbounded collection.",
+        ],
+        ["Spark", "Python"],
+        "df.groupBy('status').count().show()",
+    ),
+    (
+        "vector-dimension-mismatch",
+        "ai",
+        "Vector insert fails after embedding model switch",
+        "expected 1024 dimensions, not 1536",
+        "Existing pgvector storage was sized for the previous embedding model.",
+        [
+            "Confirm configured embedding model and output dimension.",
+            "Create a migration plan for vector column dimension and re-embedding.",
+            "Block mixed-dimension writes with a startup validation check.",
+        ],
+        ["Vector Search", "RAG", "PostgreSQL"],
+        "SELECT vector_dims(embedding) FROM solution_embeddings LIMIT 1;",
+    ),
+    (
+        "rag-citation-contract",
+        "ai",
+        "Grounded summary is rejected by validation",
+        "citation list contains unknown solution id",
+        "The model cited an identifier that was not present in the authorized source set.",
+        [
+            "Reject the generated response without displaying it.",
+            "Retry with the allowed source identifiers only.",
+            "Add an evaluation case for citation validation.",
+        ],
+        ["RAG", "LLM", "FastAPI"],
+        "assert set(answer.citations) <= allowed_solution_ids",
+    ),
+    (
+        "llm-context-window-truncation",
+        "ai",
+        "LLM summary misses the highest ranked solution",
+        "maximum context length exceeded",
+        "The context builder included too many low-ranked records before the strongest evidence.",
+        [
+            "Sort authorized eligible records globally before context assembly.",
+            "Limit context by ranked source count and token budget.",
+            "Verify the top record remains present in the prompt.",
+        ],
+        ["LLM", "RAG", "Python"],
+        "sources = ranked_sources[:RAG_MAX_CONTEXT_SOLUTIONS]",
+    ),
+    (
+        "mlflow-artifact-access",
+        "ai",
+        "Model registration cannot read evaluation artifacts",
+        "Permission denied while downloading artifact",
+        "The MLflow artifact store policy allowed the training role but not the registration role.",
+        [
+            "Identify the artifact URI and caller role.",
+            "Grant read access to the registration role through the approved policy.",
+            "Rerun registration and verify artifact lineage is preserved.",
+        ],
+        ["MLflow", "AWS", "Security"],
+        "mlflow artifacts download --artifact-uri <uri>",
+    ),
+]
+
+for variant_key, variant_title, workload_context in BLUEPRINT_EXPANSION_VARIANTS:
+    for key, domain, title, error, root_cause, steps, technologies, code in BLUEPRINT_EXPANSION_CASES:
+        BLUEPRINTS.append(
+            (
+                f"{key}-{variant_key}",
+                domain,
+                f"{title} - {variant_title}",
+                error,
+                f"{root_cause} The issue surfaced in {workload_context}.",
+                steps,
+                technologies,
+                code,
+            )
+        )
 
 ENVIRONMENTS = [
     ("Development", "ap-south-1", "dev"),
@@ -208,6 +819,17 @@ ENVIRONMENTS = [
     ("Pre-production", "eu-west-1", "preprod"),
     ("Production", "eu-west-1", "prod"),
     ("Disaster recovery", "ap-southeast-1", "dr"),
+]
+
+SERVICE_CONTEXTS = [
+    ("payments API", "release pipeline", "customer checkout path"),
+    ("claims ingestion", "batch processing window", "downstream reporting feed"),
+    ("analytics workspace", "model evaluation run", "data-science notebook users"),
+    ("platform gateway", "blue-green rollout", "internal service consumers"),
+    ("migration control plane", "cutover rehearsal", "cloud operations team"),
+    ("observability stack", "incident response room", "on-call engineers"),
+    ("knowledge service", "review workflow", "solution authors and reviewers"),
+    ("identity bridge", "login and token refresh path", "authenticated employees"),
 ]
 
 DOMAIN_TEAM = {"cloud": "cloud_engineering", "sre": "sreaas", "software": "software_engineering", "data": "software_engineering", "ai": "ai_engineering"}
@@ -345,8 +967,16 @@ def main() -> None:
                     visibility = VisibilityLevel.DEPARTMENT
                 elif index % 17 == 0:
                     visibility = VisibilityLevel.TEAM
-                problem = f"During the {environment_name.lower()} migration in {region}, the team observed: {title.lower()}. The issue was reproduced and documented as a reusable internal runbook."
-                symptoms = f"The workload showed {error}. Deployments or operations were blocked until the underlying {domain} configuration was corrected."
+                service_name, operation_name, affected_users = SERVICE_CONTEXTS[index % len(SERVICE_CONTEXTS)]
+                problem = (
+                    f"During the {operation_name} for the {service_name} in {environment_name.lower()} ({region}), "
+                    f"the team observed: {title.lower()}. The issue affected {affected_users} and was documented "
+                    "as a reusable internal runbook after the fix was verified."
+                )
+                symptoms = (
+                    f"The service reported `{error}`. The team confirmed the failure through logs, health checks, "
+                    f"or deployment events before correcting the underlying {domain} control."
+                )
                 environment = f"{environment_name} | {region} | Cloud migration wave {(index % 8) + 1}"
                 challenge = db.get(Challenge, challenge_id)
                 if challenge is None:
@@ -384,7 +1014,10 @@ def main() -> None:
                     f"{step} ({environment_name} validation)." if not step.endswith(".") else f"{step[:-1]} ({environment_name} validation)."
                     for step in steps
                 ]
-                prevention = f"Added a pre-migration check, a rollback note, and ownership for the {', '.join(technologies[:2])} control."
+                prevention = (
+                    f"Added a pre-change check for {service_name}, an owner-reviewed rollback note, "
+                    f"and an alert or validation step covering the {', '.join(technologies[:2])} control."
+                )
                 if solution is None:
                     solution = Solution(
                         id=solution_id,

@@ -49,9 +49,23 @@ class ProfileDirectoryItem(BaseModel):
 class ProfileUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=160)
     job_title: str | None = Field(default=None, min_length=1, max_length=160)
+    contact_email: str | None = Field(default=None, min_length=3, max_length=320)
     bio: str | None = Field(default=None, max_length=4000)
     contact_handle: str | None = Field(default=None, max_length=160)
     skills: list[str] | None = Field(default=None, max_length=20)
+
+    @field_validator("contact_email")
+    @classmethod
+    def clean_contact_email(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized.count("@") != 1:
+            raise ValueError("Enter a valid work email address.")
+        local, domain = normalized.split("@")
+        if not local or "." not in domain or " " in normalized:
+            raise ValueError("Enter a valid work email address.")
+        return normalized
 
     @field_validator("skills")
     @classmethod

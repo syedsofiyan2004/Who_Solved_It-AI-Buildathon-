@@ -44,10 +44,10 @@ export function DetailSheet({ title, children, onClose }: { title: string; child
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-text/35 backdrop-blur-[2px] xl:hidden" onMouseDown={onClose} role="presentation">
-      <aside ref={panelRef} aria-label={title} className="absolute inset-x-0 bottom-0 max-h-[94vh] overflow-y-auto rounded-t-[22px] border border-border bg-elevated p-5 shadow-overlay sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[540px] sm:rounded-[22px]" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 bg-text/35 xl:hidden" onMouseDown={onClose} role="presentation">
+      <aside ref={panelRef} aria-label={title} className="absolute inset-x-0 bottom-0 max-h-[94vh] overflow-y-auto rounded-t-dialog border border-border bg-elevated p-5 shadow-overlay sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[540px] sm:rounded-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
         <div className="mb-5 flex items-center justify-between gap-3 border-b border-border pb-4">
-          <div><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-strong">Workspace detail</p><p className="mt-1 text-sm font-semibold text-text">{title}</p></div>
+          <div><p className="font-data text-[10px] uppercase tracking-[0.14em] text-brand-strong">Workspace detail</p><p className="mt-1 font-display text-sm font-semibold text-text">{title}</p></div>
           <button aria-label={copy.action.close} className="grid h-10 w-10 place-items-center rounded-control border border-border bg-surface text-text-muted transition-colors hover:bg-surface-muted hover:text-text" onClick={onClose} type="button">
             <X className="h-5 w-5" aria-hidden="true" />
           </button>

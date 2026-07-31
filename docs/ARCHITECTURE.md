@@ -58,7 +58,7 @@ FastAPI remains a single modular service using:
 ### NVIDIA local showcase
 
 - Embedding: `nvidia/nemotron-3-embed-1b`
-- Grounded chat: `moonshotai/kimi-k2.6`
+- Grounded chat: `openai/gpt-oss-120b`
 - Credential: ignored local `NVIDIA_API_KEY`
 
 ## Data boundaries

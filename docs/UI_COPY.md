@@ -81,6 +81,13 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `search.generate_summary` | Generate grounded summary |
 | `search.sources` | Sources |
 | `search.applied_query` | Results for |
+| `search.trace_eyebrow` | Retrieval trace |
+| `search.trace_body` | How this answer is assembled before any AI-generated summary is allowed. |
+| `search.trace_authorization` | Authorization first |
+| `search.trace_authorization_body` | Only records visible to this employee can be ranked or summarized. |
+| `search.trace_retrieval` | Hybrid retrieval |
+| `search.trace_gate` | Confidence gate |
+| `search.trace_summary` | Grounded summary |
 | `search.verified_results` | Showing verified solutions |
 | `search.keyword_match` | Keyword match |
 | `search.clear` | Clear search |
@@ -111,6 +118,13 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `dashboard.reviews` | Awaiting your review |
 | `dashboard.continue` | Continue where you left off |
 | `dashboard.empty` | No verified solutions are available to you yet. |
+| `dashboard.showcase_eyebrow` | Showcase intelligence |
+| `dashboard.showcase_title` | Built to prove retrieval quality, not just page polish |
+| `dashboard.showcase_body` | The demo corpus is shaped like an enterprise knowledge base: repeated incidents across environments, verified owners, exact errors, technology tags, permission scopes, and AI-safe grounding boundaries. |
+| `dashboard.visible_verified` | Visible verified solutions |
+| `dashboard.expert_profiles` | Expert profiles |
+| `dashboard.technology_graph` | Technology graph |
+| `dashboard.grounding_guardrail` | Grounding guardrail |
 
 ## Phase 1 foundation shell
 
@@ -138,6 +152,8 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `search.title` | Search past solutions |
 | `search.placeholder` | Paste an error message or describe the roadblock |
 | `search.filters` | Filters |
+| `search.show_filters` | Filters |
+| `search.hide_filters` | Hide filters |
 | `search.verified_only` | Verified only |
 | `search.technology` | Technology |
 | `search.department` | Department |
@@ -232,6 +248,7 @@ All static visible UI strings must use these IDs. Dynamic values, API error deta
 | `detail.feedback_thanks` | Thanks for the feedback. |
 | `profile.title` | Employee profile |
 | `profile.contact` | Approved contact |
+| `profile.work_email` | Work email |
 | `profile.team` | Team |
 | `profile.department` | Department |
 | `profile.skills` | Skills |

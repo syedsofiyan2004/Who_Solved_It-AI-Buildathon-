@@ -41,7 +41,7 @@ The content hash combines the canonical document with the embedding model ID. Un
 
 ```text
 Embedding: nvidia/nemotron-3-embed-1b
-Chat: moonshotai/kimi-k2.6
+Chat: openai/gpt-oss-120b
 ```
 
 The embedding adapter uses `passage` for stored solution records and `query` for user searches. The current model output is validated against the configured dimension.

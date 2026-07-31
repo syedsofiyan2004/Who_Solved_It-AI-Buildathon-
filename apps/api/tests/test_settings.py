@@ -79,4 +79,4 @@ def test_nvidia_provider_requires_key_only_when_rag_is_enabled():
         RAG_ENABLED=True,
     )
     assert configured.embedding_status == "configured"
-    assert configured.chat_model_id == "moonshotai/kimi-k2.6"
+    assert configured.chat_model_id == "openai/gpt-oss-120b"

@@ -30,16 +30,20 @@ The technical incidents and resolutions are original synthetic records based on 
 
 No record is copied from Stack Overflow, private messages, customer tickets, or internal company systems.
 
+The latest complex-incident expansion was informed by public vendor guidance on failure categories such as Kubernetes pod failure states, AWS IAM/OIDC authorization, Prometheus label cardinality, and NVIDIA GPU memory troubleshooting. The seeded records remain original synthetic examples and do not copy external runbooks.
+
 ## Generated scale
 
 `apps/api/scripts/seed_dev.py` currently produces:
 
 - 43 employee profiles
-- 49 technology records
-- 53 incident blueprints
+- 54 technology records
+- 97 incident blueprints
 - 7 deployment environments per blueprint
-- 371 challenge/solution records
+- 679 challenge/solution records
 - deterministic review history and usefulness feedback
+- source-category metadata in `data/source_catalog.json`
+- aggregate corpus validation through `apps/api/scripts/check_seed_quality.py`
 
 The script is idempotent: running it again updates the same stable showcase entities rather than creating uncontrolled duplicates.
 

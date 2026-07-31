@@ -34,7 +34,7 @@ function HistoryControls() {
 }
 
 function renderSearch(entries = ["/search?q=Docker"], initialIndex?: number, historyControls = false) {
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={entries} initialIndex={initialIndex}><Routes><Route path="/search" element={<SearchPage />} /><Route path="*" element={<SearchPage />} /></Routes>{historyControls && <HistoryControls />}</MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={entries} initialIndex={initialIndex}><Routes><Route path="/search" element={<SearchPage />} /><Route path="/solutions/:challengeId" element={<div>Full solution route</div>} /><Route path="/people/:userId" element={<div>Full profile route</div>} /><Route path="*" element={<SearchPage />} /></Routes>{historyControls && <HistoryControls />}</MemoryRouter></QueryClientProvider>);
 }
 
 describe("SearchPage", () => {
@@ -72,13 +72,70 @@ describe("SearchPage", () => {
   });
 
   it("restores the applied query and filters from a refreshed URL", async () => {
+    const user = userEvent.setup();
     apiMocks.searchSolutions.mockResolvedValue(response());
     renderSearch(["/search?q=Terraform&page=2&verified=false&sort=newest&summary=true"]);
     expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Terraform");
     expect(screen.getByDisplayValue("Terraform")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Filters/ }));
     expect(screen.getByLabelText(/Verified solutions/)).not.toBeChecked();
     expect(screen.getByLabelText("Sort results")).toHaveValue("newest");
     expect(screen.getByRole("button", { name: "Generate grounded summary" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the results toolbar in normal page flow", async () => {
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch();
+    const toolbar = await screen.findByTestId("search-results-toolbar");
+    expect(toolbar).not.toHaveClass("sticky");
+  });
+
+  it("renders grounded summary citations as readable source markers", async () => {
+    const firstCitation = "7798fd48-7ebb-531a-a6ae-baa95e658cdd";
+    const secondCitation = "f9477aa9-2df4-51fb-964f-57eafe8a9699";
+    apiMocks.searchSolutions.mockResolvedValue(response({
+      summary: `Lambda subnet expansion exceeded the VPC limit [${firstCitation}]. VPC attachment failed because subnet routes missed the endpoint [${secondCitation}].`,
+      summary_citations: [firstCitation, secondCitation],
+      service_status: { keyword_search: "available", semantic_search: "available", grounded_summary: "available" },
+    }));
+    renderSearch(["/search?q=Lambda%20API&summary=true"]);
+    expect(await screen.findByText("Verified fix 7798fd48")).toBeInTheDocument();
+    expect(screen.getByText("Verified fix f9477aa9")).toBeInTheDocument();
+    expect(screen.queryByText("Source 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Source 2")).not.toBeInTheDocument();
+    expect(screen.queryByText(firstCitation, { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByText(secondCitation, { exact: false })).not.toBeInTheDocument();
+  });
+
+  it("clears grounded summary when submitting a normal search", async () => {
+    const user = userEvent.setup();
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch(["/search?q=Lambda%20API&summary=true"]);
+    expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Lambda API");
+    expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({ include_summary: true }));
+
+    const input = screen.getByDisplayValue("Lambda API");
+    await user.clear(input);
+    await user.type(input, "Terraform state lock");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+
+    await waitFor(() => expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({
+      query: "Terraform state lock",
+      include_summary: false,
+    })));
+    expect(screen.getByRole("button", { name: "Generate grounded summary" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("requests grounded summary only from the explicit summary button", async () => {
+    const user = userEvent.setup();
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch(["/search?q=Terraform"]);
+    expect(await screen.findByTestId("applied-search-query")).toHaveTextContent("Terraform");
+    expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({ include_summary: false }));
+
+    await user.click(screen.getByRole("button", { name: "Generate grounded summary" }));
+
+    await waitFor(() => expect(apiMocks.searchSolutions).toHaveBeenLastCalledWith(expect.objectContaining({ include_summary: true })));
   });
 
   it("preserves technology filters from the URL", async () => {
@@ -117,16 +174,23 @@ describe("SearchPage", () => {
     expect(await screen.findByRole("heading", { name: "No reliable match was found" })).toBeInTheDocument();
   });
 
-  it("opens solution and solver panels from URL-backed state", async () => {
+  it("opens the full solution route instead of a preview panel", async () => {
     const user = userEvent.setup();
     apiMocks.searchSolutions.mockResolvedValue(response());
     renderSearch();
     expect(await screen.findByRole("heading", { name: "Docker import failure" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Preview" }));
-    expect(await screen.findByRole("dialog", { name: "Preview solution" })).toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "View solver" })[0]);
-    expect(await screen.findByRole("dialog", { name: "Solver profile" })).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: "Fictional Engineer" }).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: /Docker import failure/ }));
+    expect(await screen.findByText("Full solution route")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Preview solution" })).not.toBeInTheDocument();
+  });
+
+  it("opens the full solver profile route from result ownership", async () => {
+    const user = userEvent.setup();
+    apiMocks.searchSolutions.mockResolvedValue(response());
+    renderSearch();
+    expect(await screen.findByRole("heading", { name: "Docker import failure" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Fictional Engineer" })[0]);
+    expect(await screen.findByText("Full profile route")).toBeInTheDocument();
   });
 
   it("shows an error and retries", async () => {
@@ -134,7 +198,7 @@ describe("SearchPage", () => {
     renderSearch();
     const retry = await screen.findByRole("button", { name: "Try again" });
     fireEvent.click(retry);
-    expect(await screen.findByText("Docker", { exact: true })).toBeInTheDocument();
+    expect((await screen.findAllByText("Docker", { exact: true })).length).toBeGreaterThan(0);
     expect(apiMocks.searchSolutions).toHaveBeenCalledTimes(2);
   });
 });

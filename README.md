@@ -191,7 +191,7 @@ Those fields always come from PostgreSQL.
 | AI adapters | NVIDIA-hosted embedding and chat adapters | Embeddings and grounded summaries |
 | Local runtime | Docker Compose | PostgreSQL, API, and web services |
 
-The frontend is intentionally not the main design focus. The platform value is in structured knowledge capture, verification, authorization-aware retrieval, expert discovery, and grounded summarization.
+The frontend is a first-class product surface. The core value proposition - find the verified fix and the person who owns it - must be visible in seconds through the search flow, ledger-style result rows, grounded summaries, source citations, and solver ownership. UI polish is required for this hackathon build, not optional.
 
 ## Security and governance
 
@@ -211,7 +211,7 @@ The MVP includes:
 - no AWS credentials in source code;
 - safe source packaging.
 
-## Current review build status
+## Current buildathon status
 
 Implemented locally:
 
@@ -231,25 +231,86 @@ Implemented locally:
 Current showcase seed generates:
 
 - 43 employee profiles;
-- 511 generated technical solution records;
-- 427 generated verified solution records.
+- 56 technology tags;
+- 257 reusable technical problem blueprints;
+- 7 environment variants per blueprint;
+- 1,799 generated synthetic solution records.
 
 The local database may contain a higher total count if older records were intentionally preserved.
 
 ## Local runtime
 
-The application runs locally through Docker Compose:
+The application runs locally through Docker Compose. Evaluators need Docker Desktop and one NVIDIA API key for semantic retrieval and grounded summaries.
+
+### 1. Create the local environment file
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+macOS or Linux:
+
+```bash
+cp .env.example .env
+```
+
+### 2. Add the only required AI key
+
+Open `.env` and fill this line:
+
+```env
+NVIDIA_API_KEY=replace-with-your-nvidia-api-key
+```
+
+No AWS key is required for this review build. Bedrock fields are intentionally blank in `.env.example`.
+
+If a reviewer does not have an NVIDIA key, the product can still run with keyword and exact-error search by changing these two values in `.env`:
+
+```env
+AI_PROVIDER=disabled
+RAG_ENABLED=false
+```
+
+Semantic search and grounded summaries require the NVIDIA key.
+
+### 3. Start the platform
 
 ```bash
 docker compose up --build -d
-docker compose exec api python scripts/seed_dev.py
 ```
+
+The API container automatically applies database migrations and seeds the synthetic showcase corpus. The seed script is idempotent, so running it again will not create duplicate solution rows.
 
 Open:
 
 - Web: `http://localhost:5173`
 - API docs: `http://localhost:8000/docs`
 - API health: `http://localhost:8000/api/v1/health/live`
+
+### Demo accounts
+
+All local demo accounts use this password:
+
+```text
+development-only-password
+```
+
+Use these accounts:
+
+- Employee: `syed.sofiyan@minfytech.com`
+- Reviewer: `srikar.deshmukh@minfytech.com`
+- Administrator: `anant.joshi@minfytech.com`
+
+### Useful commands
+
+```bash
+docker compose ps
+docker compose logs -f api
+docker compose exec -T api python scripts/check_seed_quality.py
+docker compose down
+```
 
 ## Safe source package
 

@@ -30,10 +30,10 @@ The review build is built as a monorepo with these main parts:
 | API | FastAPI, Pydantic | Authentication, repository workflows, search, review, profile APIs |
 | Data access | SQLAlchemy, Alembic | Database models, migrations, transactional access |
 | Database | PostgreSQL with pgvector | Structured records, full-text search, vector search |
-| AI adapters | NVIDIA-hosted embedding and chat adapters | Embeddings and grounded summaries |
+| AI adapters | Configurable NVIDIA or Amazon Bedrock adapters | Embeddings and grounded summaries |
 | Local runtime | Docker Compose | Runs PostgreSQL, API, and web locally |
 
-The frontend is intentionally not the center of the design. It is the product surface for the core workflows, while the important platform value sits in the repository model, authorization rules, retrieval pipeline, review workflow, and grounded answer generation.
+The frontend is a first-class product surface for the core workflows. The important platform value still sits in the repository model, authorization rules, retrieval pipeline, review workflow, and grounded answer generation, but leadership and hackathon judges experience that value through the search flow, ledger-style result rows, citations, review states, and solver profile handoff.
 
 ## Main features
 
@@ -219,8 +219,8 @@ The current review build is implemented and runnable with Docker Compose. It inc
 The current showcase seed generates:
 
 - 43 employee profiles;
-- 511 generated technical solution records;
-- 427 generated verified solution records.
+- 679 generated technical solution records;
+- 567 generated verified solution records from the current seed run.
 
 The local database may contain a higher total count if older local records were preserved instead of resetting the database.
 

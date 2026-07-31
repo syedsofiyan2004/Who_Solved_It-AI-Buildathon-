@@ -388,6 +388,20 @@ def update_my_profile(
     for field, value in payload.model_dump(exclude_unset=True).items():
         if field == "skills" and value is None:
             continue
+        if field == "contact_email":
+            if value is None:
+                continue
+            existing_user = db.scalar(
+                select(User).where(
+                    User.email == value,
+                    User.id != current_user.id,
+                    User.deleted_at.is_(None),
+                )
+            )
+            if existing_user is not None:
+                raise HTTPException(status_code=409, detail={"code": "email_in_use", "message": "That work email is already assigned to another account."})
+            current_user.email = value
+            current_user.updated_at = datetime.now(UTC)
         setattr(profile, field, value)
     profile.updated_at = datetime.now(UTC)
     audit_event(db, request, action="profile_updated", outcome="succeeded", actor_user_id=current_user.id, entity_type="employee_profile", entity_id=current_user.id)

@@ -32,14 +32,25 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-knowledge-platform-api}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-knowledge-platform-web}
       AI_PROVIDER: ${AI_PROVIDER:-disabled}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_PROFILE: ${AWS_PROFILE:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      BEDROCK_EMBEDDING_MODEL_ID: ${BEDROCK_EMBEDDING_MODEL_ID:-}
+      BEDROCK_EMBEDDING_PROVIDER: ${BEDROCK_EMBEDDING_PROVIDER:-auto}
+      BEDROCK_EMBEDDING_DIMENSIONS: ${BEDROCK_EMBEDDING_DIMENSIONS:-}
+      BEDROCK_EMBEDDINGS_ENABLED: ${BEDROCK_EMBEDDINGS_ENABLED:-false}
+      BEDROCK_CHAT_MODEL_ID: ${BEDROCK_CHAT_MODEL_ID:-}
+      BEDROCK_GENERATION_MAX_TOKENS: ${BEDROCK_GENERATION_MAX_TOKENS:-700}
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
       NVIDIA_CHAT_URL: ${NVIDIA_CHAT_URL:-https://integrate.api.nvidia.com/v1/chat/completions}
-      NVIDIA_CHAT_MODEL: ${NVIDIA_CHAT_MODEL:-moonshotai/kimi-k2.6}
+      NVIDIA_CHAT_MODEL: ${NVIDIA_CHAT_MODEL:-openai/gpt-oss-120b}
       NVIDIA_EMBEDDING_URL: ${NVIDIA_EMBEDDING_URL:-https://integrate.api.nvidia.com/v1/embeddings}
       NVIDIA_EMBEDDING_MODEL: ${NVIDIA_EMBEDDING_MODEL:-nvidia/nemotron-3-embed-1b}
       NVIDIA_EMBEDDING_DIMENSIONS: ${NVIDIA_EMBEDDING_DIMENSIONS:-2048}
-      NVIDIA_TIMEOUT_SECONDS: ${NVIDIA_TIMEOUT_SECONDS:-45}
-      NVIDIA_GENERATION_MAX_TOKENS: ${NVIDIA_GENERATION_MAX_TOKENS:-700}
+      NVIDIA_TIMEOUT_SECONDS: ${NVIDIA_TIMEOUT_SECONDS:-120}
+      NVIDIA_GENERATION_MAX_TOKENS: ${NVIDIA_GENERATION_MAX_TOKENS:-1024}
       SEARCH_RESULT_LIMIT: ${SEARCH_RESULT_LIMIT:-10}
       SEARCH_RESULT_THRESHOLD: ${SEARCH_RESULT_THRESHOLD:-0.45}
       RAG_ENABLED: ${RAG_ENABLED:-false}
@@ -61,9 +72,13 @@ services:
       - ./apps/api/alembic:/app/alembic
       - ./apps/api/scripts:/app/scripts
       - ./apps/api/tests:/app/tests
+      - ./apps/api/pyproject.toml:/app/pyproject.toml:ro
+      - ./apps/api/alembic.ini:/app/alembic.ini:ro
+      - ./data:/app/data:ro
       - api_uploads:/app/uploads
     command: >
       sh -c "alembic upgrade head &&
+      python scripts/seed_dev.py &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live').read()"]
